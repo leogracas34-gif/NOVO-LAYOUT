@@ -89,85 +89,81 @@
 
     <LinearLayout
         android:id="@+id/sideMenu"
-        android:layout_width="210dp"
+        android:layout_width="95dp"
         android:layout_height="match_parent"
-        android:background="#95000000" 
+        android:background="#20000000" 
         android:orientation="vertical"
-        android:paddingTop="30dp"
-        android:paddingStart="15dp"
+        android:gravity="center_horizontal"
+        android:paddingTop="25dp"
         app:layout_constraintStart_toStartOf="parent">
 
         <ImageView
             android:id="@+id/ivLogo"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
             android:src="@drawable/ic_launcher"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="35dp" />
+            android:layout_marginBottom="30dp" />
 
         <LinearLayout
             android:id="@+id/etSearch"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#33FFFFFF"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔍" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" BUSCAR" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔍" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BUSCAR" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/cardLiveTv"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#CC2E7D32"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📺" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" AO VIVO" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📺" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AO VIVO" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/cardMovies"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#CC1565C0"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎬" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" FILMES" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎬" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FILMES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/cardSeries"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#CC6A1B9A"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍿" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" SÉRIES" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍿" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SÉRIES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/cardKids"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#CCEF6C00"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="12dp"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="6dp"
+            android:background="@drawable/bg_menu_item_orange"
+            android:layout_marginBottom="20dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎨" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" ÁREA KIDS" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎨" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KIDS" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
@@ -175,14 +171,13 @@
         <LinearLayout
             android:id="@+id/btnSettings"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#33FFFFFF"
-            android:gravity="center_vertical"
-            android:paddingStart="15dp"
-            android:layout_marginBottom="30dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="35dp"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚙️" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" AJUSTES" android:textColor="#FFF" android:textStyle="bold" android:layout_marginStart="10dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚙️" android:textSize="22sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AJUSTES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
     </LinearLayout>
 
