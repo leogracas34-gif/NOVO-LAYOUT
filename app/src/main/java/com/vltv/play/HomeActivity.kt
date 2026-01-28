@@ -4,16 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -21,229 +16,114 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.bumptech.glide.Glide
 import com.vltv.play.databinding.ActivityHomeBinding
-import com.vltv.play.DownloadHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
-import java.net.URLEncoder
 import kotlin.random.Random
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private val TMDB_API_KEY = "9b73f5dd15b8165b1b57419be2f29128"
+    
+    // Timer para o Banner Rotativo
+    private val bannerHandler = Handler(Looper.getMainLooper())
+    private val bannerRunnable = object : Runnable {
+        override fun run() {
+            carregarBannerAlternado()
+            bannerHandler.postDelayed(this, 30000) // Troca a cada 30 segundos
+        }
+    }
+
+    // Altere para TRUE quando quiser fixar o banner de Futebol amanhã
+    private val MODO_FUTEBOL_ATIVO = false 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val windowInsetsController =
-            WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController?.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController?.hide(WindowInsetsCompat.Type.systemBars())
 
         DownloadHelper.registerReceiver(this)
-
         setupClicks()
+        
+        // Inicia o carrossel automático
+        bannerHandler.post(bannerRunnable)
     }
 
     override fun onResume() {
         super.onResume()
-        carregarBannerAlternado()
-
+        if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
+        
         try {
-            // binding.etSearch.setText("")
+            // Ajustado para não dar erro com o novo botão de busca
             binding.etSearch.clearFocus()
-            binding.etSearch.background = null 
-            binding.etSearch.animate().scaleX(1f).scaleY(1f).setDuration(0).start()
-
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
-
             binding.cardBanner.requestFocus()
-            
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bannerHandler.removeCallbacks(bannerRunnable) // Para o timer ao fechar o app
     }
 
     private fun setupClicks() {
-        fun isTelevisionDevice(): Boolean {
-            return packageManager.hasSystemFeature("android.hardware.type.television") ||
-                   packageManager.hasSystemFeature("android.software.leanback") ||
-                   (resources.configuration.uiMode and
-                   Configuration.UI_MODE_TYPE_MASK) ==
-                   Configuration.UI_MODE_TYPE_TELEVISION
-        }
-
-        // AJUSTE: Transformando o campo de busca em um botão que abre a SearchActivity diretamente
-        binding.etSearch.isFocusable = true
-        binding.etSearch.isFocusableInTouchMode = false // Impede abrir o teclado na Home
-        
+        // Ação do novo botão de Lupa na lateral
         binding.etSearch.setOnClickListener {
-            val intent = Intent(this, SearchActivity::class.java)
-            intent.putExtra("initial_query", "")
-            startActivity(intent)
+            startActivity(Intent(this, SearchActivity::class.java).putExtra("initial_query", ""))
         }
 
-        binding.etSearch.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.etSearch.setBackgroundResource(R.drawable.bg_login_input_premium)
-                binding.etSearch.animate().scaleX(1.03f).scaleY(1.03f).setDuration(150).start()
-            } else {
-                binding.etSearch.background = null
-                binding.etSearch.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-            }
-        }
-
-        binding.btnSettings.isFocusable = true
-        binding.btnSettings.isFocusableInTouchMode = true
-        binding.btnSettings.setOnFocusChangeListener { _, hasFocus ->
-            binding.btnSettings.scaleX = if (hasFocus) 1.15f else 1f
-            binding.btnSettings.scaleY = if (hasFocus) 1.15f else 1f
-            binding.btnSettings.setColorFilter(if (hasFocus) 0xFF00C6FF.toInt() else 0xFFFFFFFF.toInt())
-        }
-
-        val cards = listOf(binding.cardLiveTv, binding.cardMovies, binding.cardSeries, binding.cardKids, binding.cardBanner)
+        // Estilo de foco para os botões da lateral (Cores Vibrantes)
+        val menuButtons = listOf(binding.etSearch, binding.cardLiveTv, binding.cardMovies, binding.cardSeries, binding.cardKids, binding.btnSettings)
         
-        cards.forEach { card ->
-            card.isFocusable = true
-            card.isClickable = true
-            
-            card.setOnFocusChangeListener { _, hasFocus ->
-                card.scaleX = if (hasFocus) 1.05f else 1f
-                card.scaleY = if (hasFocus) 1.05f else 1f
-                card.elevation = if (hasFocus) 20f else 5f
-            }
-            
-            card.setOnClickListener {
-                when (card.id) {
-                    R.id.cardLiveTv -> {
-                        val intent = Intent(this, LiveTvActivity::class.java)
-                        intent.putExtra("SHOW_PREVIEW", true)
-                        startActivity(intent)
-                    }
-                    R.id.cardMovies -> {
-                        val intent = Intent(this, VodActivity::class.java)
-                        intent.putExtra("SHOW_PREVIEW", false)
-                        startActivity(intent)
-                    }
-                    R.id.cardSeries -> {
-                        val intent = Intent(this, SeriesActivity::class.java)
-                        intent.putExtra("SHOW_PREVIEW", false)
-                        startActivity(intent)
-                    }
-                    R.id.cardKids -> {
-                        val intent = Intent(this, KidsActivity::class.java)
-                        intent.putExtra("SHOW_PREVIEW", false)
-                        startActivity(intent)
-                    }
-                    R.id.cardBanner -> { /* ação banner */ }
-                }
+        menuButtons.forEach { btn ->
+            btn.isFocusable = true
+            btn.setOnFocusChangeListener { _, hasFocus ->
+                btn.scaleX = if (hasFocus) 1.10f else 1f
+                btn.scaleY = if (hasFocus) 1.10f else 1f
+                // Efeito de brilho ao focar (opcional)
+                btn.alpha = if (hasFocus) 1f else 0.8f
             }
         }
+
+        binding.cardLiveTv.setOnClickListener { startActivity(Intent(this, LiveTvActivity::class.java).putExtra("SHOW_PREVIEW", true)) }
+        binding.cardMovies.setOnClickListener { startActivity(Intent(this, VodActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
+        binding.cardSeries.setOnClickListener { startActivity(Intent(this, SeriesActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
+        binding.cardKids.setOnClickListener { startActivity(Intent(this, KidsActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
         
-        if (isTelevisionDevice()) {
-            binding.cardLiveTv.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardMovies.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.etSearch.requestFocus()
-                    true
-                } else false
-            }
-            
-            binding.cardMovies.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardLiveTv.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardSeries.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.etSearch.requestFocus()
-                    true
-                } else false
-            }
-            
-            binding.cardSeries.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardMovies.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardKids.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.btnSettings.requestFocus()
-                    true
-                } else false
-            }
-
-            binding.cardKids.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.cardSeries.requestFocus()
-                    true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) {
-                    binding.btnSettings.requestFocus()
-                    true
-                } else false
-            }
-            
-            // Suporte ao clique do controle remoto na busca
-            binding.etSearch.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
-                    if (event.action == KeyEvent.ACTION_UP) {
-                        val intent = Intent(this, SearchActivity::class.java)
-                        intent.putExtra("initial_query", "")
-                        startActivity(intent)
-                    }
-                    true
-                } else false
-            }
-        }
-
         binding.btnSettings.setOnClickListener {
             val itens = arrayOf("Meus downloads", "Configurações", "Sair")
-            AlertDialog.Builder(this)
-                .setTitle("Opções")
-                .setItems(itens) { _, which ->
-                    when (which) {
-                        0 -> startActivity(Intent(this, DownloadsActivity::class.java))
-                        1 -> startActivity(Intent(this, SettingsActivity::class.java))
-                        2 -> mostrarDialogoSair()
-                    }
+            AlertDialog.Builder(this).setTitle("Opções").setItems(itens) { _, which ->
+                when (which) {
+                    0 -> startActivity(Intent(this, DownloadsActivity::class.java))
+                    1 -> startActivity(Intent(this, SettingsActivity::class.java))
+                    2 -> mostrarDialogoSair()
                 }
-                .show()
+            }.show()
         }
 
-        binding.cardBanner.requestFocus()
-    }
-
-    private fun mostrarDialogoSair() {
-        AlertDialog.Builder(this)
-            .setTitle("Sair")
-            .setMessage("Deseja realmente sair e desconectar?")
-            .setPositiveButton("Sim") { _, _ ->
-                val prefs = getSharedPreferences("vltv_prefs", Context.MODE_PRIVATE)
-                prefs.edit().clear().apply()
-
-                val intent = Intent(this, LoginActivity::class.java)
-                intent.flags =
-                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+        binding.cardBanner.setOnClickListener {
+            if (MODO_FUTEBOL_ATIVO) {
+                // AMANHÃ: Coloque aqui o Intent para abrir o canal do jogo direto
+                Toast.makeText(this, "Abrindo Jogo Ao Vivo...", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Não", null)
-            .show()
+        }
     }
 
     private fun carregarBannerAlternado() {
+        if (MODO_FUTEBOL_ATIVO) {
+            exibirBannerFutebol()
+            return
+        }
+
         val prefs = getSharedPreferences("vltv_home_prefs", Context.MODE_PRIVATE)
         val ultimoTipo = prefs.getString("ultimo_tipo_banner", "tv") ?: "tv"
         val tipoAtual = if (ultimoTipo == "tv") "movie" else "tv"
@@ -261,68 +141,53 @@ class HomeActivity : AppCompatActivity() {
                     val randomIndex = Random.nextInt(results.length())
                     val item = results.getJSONObject(randomIndex)
 
-                    val tituloOriginal = if (item.has("title")) item.getString("title")
-                    else if (item.has("name")) item.getString("name")
-                    else "Destaque"
-
-                    val overview = if (item.has("overview")) item.getString("overview") else ""
-                    val backdropPath = item.getString("backdrop_path")
-                    val prefixo = if (tipoAtual == "movie") "Filme em Alta: " else "Série em Alta: "
+                    val titulo = if (item.has("title")) item.getString("title") else item.getString("name")
+                    val overview = item.optString("overview", "")
+                    val backdropPath = item.optString("backdrop_path", "")
                     val tmdbId = item.getString("id")
 
-                    if (backdropPath != "null" && backdropPath.isNotBlank()) {
-                        val imageUrl = "https://image.tmdb.org/t/p/original$backdropPath"
-                        withContext(Dispatchers.Main) {
-                            binding.tvBannerTitle.text = "$prefixo$tituloOriginal"
-                            binding.tvBannerOverview.text = overview
-                            Glide.with(this@HomeActivity)
-                                .load(imageUrl)
-                                .centerCrop()
-                                .placeholder(android.R.color.black)
-                                .into(binding.imgBanner)
-                        }
-                        buscarLogoOverlayHome(tmdbId, tipoAtual, tituloOriginal)
+                    withContext(Dispatchers.Main) {
+                        binding.tvBannerTitle.text = titulo
+                        binding.tvBannerOverview.text = overview
+                        Glide.with(this@HomeActivity)
+                            .load("https://image.tmdb.org/t/p/original$backdropPath")
+                            .centerCrop()
+                            .into(binding.imgBanner)
+                        
+                        buscarLogoOverlayHome(tmdbId, tipoAtual)
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    private fun buscarLogoOverlayHome(tmdbId: String, tipo: String, rawName: String) {
-        var cleanName = rawName
-        cleanName = cleanName.replace(Regex("[\\(\\[\\{].*?[\\)\\]\\}]"), "")
-        cleanName = cleanName.replace(Regex("\\b\\d{4}\\b"), "")
+    private fun exibirBannerFutebol() {
+        binding.tvBannerTitle.text = "BRASILEIRÃO: FLAMENGO x ATLÉTICO"
+        binding.tvBannerOverview.text = "Acompanhe o clássico ao vivo agora no Premiere!"
+        binding.imgBannerLogo.visibility = View.GONE
         
-        val lixo = listOf("FHD", "HD", "SD", "4K", "8K", "H265", "H.265", "LEG", "DUBLADO", "DUB", "|", "-", "_", ".")
-        lixo.forEach { cleanName = cleanName.replace(it, "", ignoreCase = true) }
-        cleanName = cleanName.trim().replace(Regex("\\s+"), " ")
+        // Coloque aqui o link da imagem do estádio ou arte do jogo
+        Glide.with(this).load("URL_DA_IMAGEM_DO_JOGO").centerCrop().into(binding.imgBanner)
+    }
 
+    private fun buscarLogoOverlayHome(tmdbId: String, tipo: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val imagesUrl = "https://api.themoviedb.org/3/$tipo/$tmdbId/images?api_key=$TMDB_API_KEY&include_image_language=pt,en,null"
-                val imagesJson = URL(imagesUrl).readText()
-                val imagesObj = JSONObject(imagesJson)
+                val imagesObj = JSONObject(URL(imagesUrl).readText())
 
-                if (imagesObj.has("logos")) {
-                    val logos = imagesObj.getJSONArray("logos")
-                    if (logos.length() > 0) {
-                        val logoPath = logos.getJSONObject(0).getString("file_path")
-                        val fullLogoUrl = "https://image.tmdb.org/t/p/w500$logoPath"
-
-                        withContext(Dispatchers.Main) {
-                            binding.tvBannerTitle.visibility = View.GONE
-                            binding.imgBannerLogo.visibility = View.VISIBLE
-                            Glide.with(this@HomeActivity).load(fullLogoUrl).into(binding.imgBannerLogo)
-                        }
-                        return@launch
+                if (imagesObj.has("logos") && imagesObj.getJSONArray("logos").length() > 0) {
+                    val logoPath = imagesObj.getJSONArray("logos").getJSONObject(0).getString("file_path")
+                    withContext(Dispatchers.Main) {
+                        binding.tvBannerTitle.visibility = View.GONE
+                        binding.imgBannerLogo.visibility = View.VISIBLE
+                        Glide.with(this@HomeActivity).load("https://image.tmdb.org/t/p/w500$logoPath").into(binding.imgBannerLogo)
                     }
-                }
-                
-                withContext(Dispatchers.Main) {
-                    binding.tvBannerTitle.visibility = View.VISIBLE
-                    binding.imgBannerLogo.visibility = View.GONE
+                } else {
+                    withContext(Dispatchers.Main) {
+                        binding.tvBannerTitle.visibility = View.VISIBLE
+                        binding.imgBannerLogo.visibility = View.GONE
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -333,11 +198,12 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            mostrarDialogoSair()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+    private fun mostrarDialogoSair() {
+        AlertDialog.Builder(this).setTitle("Sair").setMessage("Deseja sair?")
+            .setPositiveButton("Sim") { _, _ -> 
+                getSharedPreferences("vltv_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }.setNegativeButton("Não", null).show()
     }
 }
