@@ -57,7 +57,7 @@ class HomeActivity : AppCompatActivity() {
         carregarBannerAlternado()
 
         try {
-            binding.etSearch.setText("")
+            // binding.etSearch.setText("")
             binding.etSearch.clearFocus()
             binding.etSearch.background = null 
             binding.etSearch.animate().scaleX(1f).scaleY(1f).setDuration(0).start()
