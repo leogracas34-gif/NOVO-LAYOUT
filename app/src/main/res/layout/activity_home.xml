@@ -111,6 +111,8 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="20dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔍" android:textSize="22sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BUSCAR" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
@@ -123,6 +125,8 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="20dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📺" android:textSize="22sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AO VIVO" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
@@ -135,6 +139,8 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="20dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎬" android:textSize="22sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FILMES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
@@ -147,6 +153,8 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="20dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍿" android:textSize="22sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SÉRIES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
@@ -159,12 +167,17 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="20dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎨" android:textSize="22sp"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KIDS" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
         </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <View 
+            android:layout_width="match_parent" 
+            android:layout_height="0dp" 
+            android:layout_weight="1"/>
 
         <LinearLayout
             android:id="@+id/btnSettings"
@@ -173,9 +186,24 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginBottom="35dp"
+            android:padding="8dp"
+            android:background="@drawable/bg_menu_focus"
             android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚙️" android:textSize="22sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AJUSTES" android:textColor="#E0E0E0" android:textSize="9sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            
+            <TextView 
+                android:layout_width="wrap_content" 
+                android:layout_height="wrap_content" 
+                android:text="⚙️" 
+                android:textSize="22sp"/>
+            
+            <TextView 
+                android:layout_width="wrap_content" 
+                android:layout_height="wrap_content" 
+                android:text="AJUSTES" 
+                android:textColor="#E0E0E0" 
+                android:textSize="9sp" 
+                android:textStyle="bold" 
+                android:layout_marginTop="2dp"/>
         </LinearLayout>
     </LinearLayout>
 
