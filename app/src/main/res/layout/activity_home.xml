@@ -8,23 +8,23 @@
 
     <LinearLayout
         android:id="@+id/sideMenu"
-        android:layout_width="70dp"
+        android:layout_width="75dp"
         android:layout_height="match_parent"
         android:background="#0F0F0F"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:paddingTop="15dp"
+        android:paddingTop="20dp"
         app:layout_constraintStart_toStartOf="parent">
 
         <ImageView
-            android:id="@+id/ivLogoSidebar"
+            android:id="@+id/ivLogo"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_launcher"
             android:layout_marginBottom="30dp" />
 
         <ImageButton
-            android:id="@+id/btnSearchSide"
+            android:id="@+id/etSearch"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -34,7 +34,7 @@
             app:tint="#FFFFFF"/>
 
         <ImageButton
-            android:id="@+id/btnLiveSide"
+            android:id="@+id/cardLiveTv"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -44,7 +44,7 @@
             app:tint="#808080"/>
 
         <ImageButton
-            android:id="@+id/btnMoviesSide"
+            android:id="@+id/cardMovies"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -54,11 +54,21 @@
             app:tint="#808080"/>
 
         <ImageButton
-            android:id="@+id/btnSeriesSide"
+            android:id="@+id/cardSeries"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_gallery"
+            android:layout_marginBottom="15dp"
+            android:focusable="true"
+            app:tint="#808080"/>
+
+        <ImageButton
+            android:id="@+id/cardKids"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_compass"
             android:layout_marginBottom="15dp"
             android:focusable="true"
             app:tint="#808080"/>
@@ -71,7 +81,7 @@
             android:layout_height="50dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_preferences"
-            android:layout_marginBottom="15dp"
+            android:layout_marginBottom="20dp"
             android:focusable="true"
             app:tint="#FFFFFF"/>
     </LinearLayout>
@@ -93,58 +103,49 @@
                 android:layout_height="0dp"
                 android:layout_weight="0.6"
                 app:cardCornerRadius="0dp"
-                app:cardElevation="0dp"
                 android:focusable="true"
                 android:clickable="true">
 
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
                     <ImageView
                         android:id="@+id/imgBanner"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop" />
-
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="@drawable/gradient_black_bottom" />
-
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_gravity="bottom"
                         android:padding="30dp"
                         android:orientation="vertical">
-
+                        
                         <ImageView
                             android:id="@+id/imgBannerLogo"
-                            android:layout_width="250dp"
-                            android:layout_height="100dp"
-                            android:scaleType="fitCenter"
+                            android:layout_width="200dp"
+                            android:layout_height="80dp"
                             android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/tvBannerTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Futebol Ao Vivo"
                             android:textColor="#FFFFFF"
                             android:textSize="32sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/tvBannerOverview"
-                            android:layout_width="600dp"
+                            android:layout_width="500dp"
                             android:layout_height="wrap_content"
-                            android:text="Acompanhe os melhores lances do Brasileirão."
-                            android:textColor="#DDDDDD"
-                            android:textSize="16sp"
+                            android:textColor="#CCCCCC"
+                            android:textSize="14sp"
                             android:layout_marginTop="8dp"
-                            android:maxLines="3"
-                            android:ellipsize="end" />
+                            android:maxLines="2" />
                     </LinearLayout>
                 </FrameLayout>
             </androidx.cardview.widget.CardView>
@@ -161,53 +162,14 @@
                     android:layout_height="wrap_content"
                     android:text="Lançamentos e Destaques"
                     android:textColor="#FFFFFF"
-                    android:textSize="18sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="10dp"/>
 
-                <HorizontalScrollView
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvRecentAdditions"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scrollbars="none">
-                    
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:orientation="horizontal">
-
-                        <androidx.cardview.widget.CardView
-                            android:id="@+id/cardExemplo"
-                            android:layout_width="180dp"
-                            android:layout_height="match_parent"
-                            android:layout_marginEnd="12dp"
-                            app:cardCornerRadius="10dp"
-                            app:cardBackgroundColor="#1A1A1A"
-                            android:focusable="true">
-                            
-                            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                <ImageView android:id="@+id/imgExemplo" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop"/>
-                                
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="NOVO"
-                                    android:background="#E50914"
-                                    android:textColor="#FFF"
-                                    android:textSize="10sp"
-                                    android:textStyle="bold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="2dp"
-                                    android:layout_gravity="top|end"/>
-                            </FrameLayout>
-                        </androidx.cardview.widget.CardView>
-                        
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rvRecentAdditions"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent" />
-
-                    </LinearLayout>
-                </HorizontalScrollView>
+                    android:layout_height="match_parent" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
