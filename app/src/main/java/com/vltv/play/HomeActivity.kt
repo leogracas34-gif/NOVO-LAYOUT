@@ -24,6 +24,10 @@ import org.json.JSONObject
 import java.net.URL
 import kotlin.random.Random
 import android.widget.Toast
+// --- INCLUSÃO FIREBASE ---
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
+import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 
 class HomeActivity : AppCompatActivity() {
 
@@ -40,12 +44,39 @@ class HomeActivity : AppCompatActivity() {
     }
 
     // Altere para TRUE quando quiser fixar o banner de Futebol amanhã
-    private val MODO_FUTEBOL_ATIVO = false 
+    // Agora o Firebase pode controlar isso automaticamente
+    private var MODO_FUTEBOL_ATIVO = false 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // --- INICIALIZAÇÃO FIREBASE REMOTE CONFIG ---
+        val remoteConfig = Firebase.remoteConfig
+        val configSettings = remoteConfigSettings {
+            minimumFetchIntervalInSeconds = 60 // Verifica mudanças a cada 1 minuto (ideal para jogos)
+        }
+        remoteConfig.setConfigSettingsAsync(configSettings)
+        
+        // Busca as informações do Firebase
+        remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
+            if (task.isSuccessful) {
+                // Sincroniza as variáveis com o painel do Google
+                MODO_FUTEBOL_ATIVO = remoteConfig.getBoolean("modo_futebol")
+                if (MODO_FUTEBOL_ATIVO) {
+                    val titulo = remoteConfig.getString("futebol_titulo")
+                    val desc = remoteConfig.getString("futebol_descricao")
+                    val imagem = remoteConfig.getString("futebol_imagem")
+                    
+                    // Aplica ao banner na hora
+                    binding.tvBannerTitle.text = titulo
+                    binding.tvBannerOverview.text = desc
+                    binding.imgBannerLogo.visibility = View.GONE
+                    Glide.with(this).load(imagem).centerCrop().into(binding.imgBanner)
+                }
+            }
+        }
 
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -63,7 +94,6 @@ class HomeActivity : AppCompatActivity() {
         if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
         
         try {
-            // Ajustado para não dar erro com o novo botão de busca
             binding.etSearch.clearFocus()
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
@@ -77,12 +107,10 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupClicks() {
-        // Ação do novo botão de Lupa na lateral
         binding.etSearch.setOnClickListener {
             startActivity(Intent(this, SearchActivity::class.java).putExtra("initial_query", ""))
         }
 
-        // Estilo de foco para os botões da lateral (Cores Vibrantes)
         val menuButtons = listOf(binding.etSearch, binding.cardLiveTv, binding.cardMovies, binding.cardSeries, binding.cardKids, binding.btnSettings)
         
         menuButtons.forEach { btn ->
@@ -90,7 +118,6 @@ class HomeActivity : AppCompatActivity() {
             btn.setOnFocusChangeListener { _, hasFocus ->
                 btn.scaleX = if (hasFocus) 1.10f else 1f
                 btn.scaleY = if (hasFocus) 1.10f else 1f
-                // Efeito de brilho ao focar (opcional)
                 btn.alpha = if (hasFocus) 1f else 0.8f
             }
         }
@@ -113,7 +140,6 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardBanner.setOnClickListener {
             if (MODO_FUTEBOL_ATIVO) {
-                // AMANHÃ: Coloque aqui o Intent para abrir o canal do jogo direto
                 Toast.makeText(this, "Abrindo Jogo Ao Vivo...", Toast.LENGTH_SHORT).show()
             }
         }
@@ -163,11 +189,10 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun exibirBannerFutebol() {
+        // Esta função agora pode ser alimentada pelo Firebase ou manter o padrão estático
         binding.tvBannerTitle.text = "BRASILEIRÃO: FLAMENGO x ATLÉTICO"
         binding.tvBannerOverview.text = "Acompanhe o clássico ao vivo agora no Premiere!"
         binding.imgBannerLogo.visibility = View.GONE
-        
-        // Coloque aqui o link da imagem do estádio ou arte do jogo
         Glide.with(this).load("URL_DA_IMAGEM_DO_JOGO").centerCrop().into(binding.imgBanner)
     }
 
