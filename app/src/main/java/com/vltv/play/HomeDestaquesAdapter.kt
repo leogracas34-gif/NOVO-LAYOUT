@@ -12,80 +12,92 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.Priority
 import org.json.JSONObject
+import kotlinx.coroutines.*
 
 class HomeDestaquesAdapter(
     private val context: Context,
     private val items: List<JSONObject>,
-    private val onItemSelected: (JSONObject) -> Unit // Aciona o Preview/Sinopse na Home
+    private val onItemSelected: (JSONObject) -> Unit
 ) : RecyclerView.Adapter<HomeDestaquesAdapter.VH>() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var runnable: Runnable? = null
+    
+    // Cache de Logos (Mesmo arquivo que as Activities de detalhes usam)
+    private val logoCachePrefs = context.getSharedPreferences("vltv_logos_cache", Context.MODE_PRIVATE)
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val imgPoster: ImageView = v.findViewById(R.id.imgPoster)
         val tvName: TextView = v.findViewById(R.id.tvName)
-        val imgLogo: ImageView = v.findViewById(R.id.imgLogo) // Usa o layout que você já tem
+        val imgLogo: ImageView = v.findViewById(R.id.imgLogo)
+        var job: Job? = null // ✅ Proteção contra o "Pisca-Pisca"
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        // Usamos o seu layout item_vod que já está pronto e configurado
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
         return VH(v)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
+        val isMovie = item.has("title")
+        val titulo = if (isMovie) item.getString("title") else item.getString("name")
+        val streamId = item.optInt("id")
         
-        // Diferencia Filme (title) de Série (name) conforme a API do TMDB
-        val titulo = if (item.has("title")) item.getString("title") else item.getString("name")
-        val posterPath = item.optString("poster_path", "")
-        val fullPosterUrl = "https://image.tmdb.org/t/p/w500$posterPath"
-
+        holder.job?.cancel() // ✅ Cancela busca anterior se você rodar a lista rápido
+        
         holder.tvName.text = titulo
-        holder.tvName.visibility = View.GONE // Mantém limpo, só aparece no foco
-        holder.imgLogo.visibility = View.GONE // Inicialmente oculto
+        holder.tvName.visibility = View.VISIBLE
+        holder.imgLogo.visibility = View.GONE
+        holder.imgLogo.setImageDrawable(null)
 
+        val posterUrl = "https://image.tmdb.org/t/p/w500${item.optString("poster_path")}"
+
+        // ✅ CARREGAMENTO IMEDIATO DO POSTER
         Glide.with(context)
-            .load(fullPosterUrl)
+            .load(posterUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .priority(Priority.IMMEDIATE) // Prioridade máxima
             .placeholder(R.drawable.bg_logo_placeholder)
-            .centerCrop()
             .into(holder.imgPoster)
 
-        // ✅ LOGICA DE CLIQUE: Encaminha para a tela de Detalhes correta
+        // ✅ LÓGICA DE LOGO FIXA (Igual à tela de detalhes)
+        val key = if (isMovie) "movie_logo_$streamId" else "series_logo_$streamId"
+        val cachedLogoUrl = logoCachePrefs.getString(key, null)
+
+        if (cachedLogoUrl != null) {
+            holder.tvName.visibility = View.GONE
+            holder.imgLogo.visibility = View.VISIBLE
+            Glide.with(context).load(cachedLogoUrl).diskCacheStrategy(DiskCacheStrategy.ALL).into(holder.imgLogo)
+        }
+
         holder.itemView.setOnClickListener {
-            val isMovie = item.has("title")
-            val intent = if (isMovie) {
-                Intent(context, DetailsActivity::class.java) // Activity de Filmes
-            } else {
-                Intent(context, SeriesDetailsActivity::class.java) // Activity de Séries
-            }
+            val intent = if (isMovie) Intent(context, DetailsActivity::class.java) 
+                         else Intent(context, SeriesDetailsActivity::class.java)
             
-            // Passando os dados exatamente como seu app espera
-            intent.putExtra("stream_id", item.optString("id"))
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // Limpa o "fantasma" do filme anterior
+            
+            if (isMovie) intent.putExtra("stream_id", streamId)
+            else intent.putExtra("series_id", streamId)
+            
             intent.putExtra("name", titulo)
-            intent.putExtra("icon", fullPosterUrl)
+            intent.putExtra("icon", posterUrl)
             intent.putExtra("rating", item.optString("vote_average", "0.0"))
             context.startActivity(intent)
         }
 
-        // ✅ LOGICA DE FOCO: Animação + Gatilho para Preview/Sinopse
+        // ✅ PREVIEW E FOCO
         holder.itemView.setOnFocusChangeListener { view, hasFocus ->
-            // Efeito visual de crescimento
-            view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
-                .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
+            view.animate().scaleX(if (hasFocus) 1.1f else 1.0f).scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
             
-            holder.tvName.visibility = if (hasFocus) View.VISIBLE else View.GONE
-
             if (hasFocus) {
-                // Se o foco parar por 1.5 segundos, avisa a Home para mostrar a sinopse/vídeo
                 runnable?.let { handler.removeCallbacks(it) }
                 runnable = Runnable { onItemSelected(item) }
                 handler.postDelayed(runnable!!, 1500)
             } else {
-                runnable?.let { handler.removeCallbacks(it) }
+                handler.removeCallbacksAndMessages(null)
             }
         }
     }
