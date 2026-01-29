@@ -77,5 +77,5 @@ dependencies {
     implementation("com.google.firebase:firebase-config") 
     
     // Esta linha é essencial para que o seu código HomeActivity.kt reconheça os comandos do Firebase
-    implementation("com.google.firebase:firebase-common-ktx")
+    implementation("com.google.firebase:firebase-common")
 }
