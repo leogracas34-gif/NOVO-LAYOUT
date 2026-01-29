@@ -24,10 +24,10 @@ import org.json.JSONObject
 import java.net.URL
 import kotlin.random.Random
 import android.widget.Toast
-// --- INCLUSÃO FIREBASE ---
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
+// --- IMPORTS FIREBASE ATUALIZADOS PARA FIREBASE 34 ---
+import com.google.firebase.Firebase
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 
 class HomeActivity : AppCompatActivity() {
 
@@ -52,7 +52,7 @@ class HomeActivity : AppCompatActivity() {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // --- INICIALIZAÇÃO FIREBASE REMOTE CONFIG ---
+        // --- INICIALIZAÇÃO FIREBASE REMOTE CONFIG (ESTILO NOVO) ---
         val remoteConfig = Firebase.remoteConfig
         val configSettings = remoteConfigSettings {
             minimumFetchIntervalInSeconds = 60 // Verifica mudanças a cada 1 minuto (ideal para jogos)
@@ -73,7 +73,9 @@ class HomeActivity : AppCompatActivity() {
                     binding.tvBannerTitle.text = titulo
                     binding.tvBannerOverview.text = desc
                     binding.imgBannerLogo.visibility = View.GONE
-                    Glide.with(this).load(imagem).centerCrop().into(binding.imgBanner)
+                    
+                    // Ajustado .load(imagem.toString()) para evitar erro de ambiguidade no build
+                    Glide.with(this).load(imagem.toString()).centerCrop().into(binding.imgBanner)
                 }
             }
         }
@@ -189,7 +191,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun exibirBannerFutebol() {
-        // Esta função agora pode ser alimentada pelo Firebase ou manter o padrão estático
         binding.tvBannerTitle.text = "BRASILEIRÃO: FLAMENGO x ATLÉTICO"
         binding.tvBannerOverview.text = "Acompanhe o clássico ao vivo agora no Premiere!"
         binding.imgBannerLogo.visibility = View.GONE
