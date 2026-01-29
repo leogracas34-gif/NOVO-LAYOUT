@@ -24,7 +24,7 @@ import org.json.JSONObject
 import java.net.URL
 import kotlin.random.Random
 import android.widget.Toast
-import androidx.recyclerview.widget.LinearLayoutManager // ADICIONADO PARA OS DESTAQUES
+import androidx.recyclerview.widget.LinearLayoutManager
 
 // --- IMPORTS FIREBASE ATUALIZADOS PARA FIREBASE 34 ---
 import com.google.firebase.Firebase
@@ -105,10 +105,11 @@ class HomeActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     // Configura o RecyclerView debaixo do banner
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
-                    // Aqui você deve setar seu Adapter (ex: VodAdapter) passando 'results'
-                    // binding.rvRecentAdditions.adapter = VodAdapter(results)
                     
-                    // Configuração de Foco Direcional Robusta
+                    // --- MANTENDO O PADRÃO: VOCÊ DEVE CONECTAR SEU ADAPTER AQUI ---
+                    // Exemplo: binding.rvRecentAdditions.adapter = VodAdapter(results)
+                    
+                    // Configuração de Foco Direcional Robusta para TV
                     binding.rvRecentAdditions.isFocusable = true
                     binding.rvRecentAdditions.nextFocusUp = binding.cardBanner.id
                 }
@@ -125,7 +126,6 @@ class HomeActivity : AppCompatActivity() {
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
             
-            // Garante que o foco volta para o Banner ao retornar, se for TV
             if (isTelevisionDevice()) {
                 binding.cardBanner.requestFocus()
             }
@@ -162,6 +162,9 @@ class HomeActivity : AppCompatActivity() {
         // Lógica de navegação do controle remoto (Trilhos Fixos)
         binding.cardBanner.nextFocusDown = binding.rvRecentAdditions.id
         binding.cardBanner.nextFocusLeft = binding.cardLiveTv.id
+        
+        // Garante que o RecyclerView saiba voltar para o menu à esquerda
+        binding.rvRecentAdditions.nextFocusLeft = binding.cardMovies.id
 
         binding.cardLiveTv.setOnClickListener { startActivity(Intent(this, LiveTvActivity::class.java).putExtra("SHOW_PREVIEW", true)) }
         binding.cardMovies.setOnClickListener { startActivity(Intent(this, VodActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
@@ -181,8 +184,8 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardBanner.setOnClickListener {
             if (MODO_FUTEBOL_ATIVO) {
-                // Aqui você pode disparar a Intent para o canal de esportes direto
-                Toast.makeText(this, "Abrindo Jogo Ao Vivo...", Toast.LENGTH_SHORT).show()
+                // Se estiver no modo futebol, abre a TV ao vivo direto
+                startActivity(Intent(this, LiveTvActivity::class.java))
             }
         }
     }
