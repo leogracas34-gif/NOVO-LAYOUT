@@ -31,13 +31,18 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        // Atualizado para Java 17 para compatibilidade com Gradle 8+ e Firebase 34
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "1.8"
+        // Atualizado para 17 para alinhar com o Java 17
+        jvmTarget = "17"
     }
+
     buildFeatures {
         viewBinding = true
     }
@@ -65,6 +70,9 @@ dependencies {
 
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // --- FIREBASE STACK (ATUALIZADO) ---
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
-    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-config-ktx") // Adicionado para o banner remoto
 }
