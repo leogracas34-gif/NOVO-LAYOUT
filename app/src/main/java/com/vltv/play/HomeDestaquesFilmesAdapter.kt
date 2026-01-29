@@ -36,7 +36,6 @@ class HomeDestaquesFilmesAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        // Mantendo as chaves que funcionam no seu layout (TMDB)
         val titulo = item.optString("title").ifEmpty { item.optString("name") }
         val poster = item.optString("poster_path", "")
         val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
@@ -48,18 +47,21 @@ class HomeDestaquesFilmesAdapter(
             .load(fullPosterUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.bg_logo_placeholder)
-            .centerCrop() // ✅ ISSO CORRIGE A CAPA GIGANTE
+            .centerCrop() 
             .into(holder.imgPoster)
 
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
             
-            // ✅ USANDO "id" para evitar a tela preta
-            intent.putExtra("stream_id", item.optInt("id")) 
-            intent.putExtra("name", titulo)
+            // ✅ AQUI ESTÁ A CORREÇÃO:
+            // Não passamos o ID do site para a chave "stream_id".
+            // Deixamos a "stream_id" como 0 ou vazia para a DetailsActivity 
+            // saber que precisa pesquisar o filme no seu painel pelo Nome.
+            intent.putExtra("stream_id", 0) 
+            intent.putExtra("name", titulo) 
             intent.putExtra("icon", fullPosterUrl)
             intent.putExtra("rating", item.optString("vote_average", "0.0"))
-            intent.putExtra("is_series", false) // ✅ GARANTE QUE NÃO PEDE EPISÓDIO
+            intent.putExtra("is_series", false) 
             
             context.startActivity(intent)
         }
