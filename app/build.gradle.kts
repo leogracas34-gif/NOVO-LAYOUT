@@ -71,8 +71,11 @@ dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // --- FIREBASE STACK (ATUALIZADO) ---
+    // --- FIREBASE STACK (ATUALIZADO PARA SUPORTE KOTLIN 1.9/2.0) ---
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-config") // Adicionado para o banner remoto
+    implementation("com.google.firebase:firebase-config") 
+    
+    // Esta linha é essencial para que o seu código HomeActivity.kt reconheça os comandos do Firebase
+    implementation("com.google.firebase:firebase-common-ktx")
 }
