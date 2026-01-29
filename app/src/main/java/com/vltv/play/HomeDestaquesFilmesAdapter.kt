@@ -36,15 +36,18 @@ class HomeDestaquesFilmesAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        val titulo = item.optString("title").ifEmpty { item.optString("name") }
-        val poster = item.optString("poster_path", "")
-        val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
+        // ✅ CHAVES DO SEU SERVIDOR (Baseado na sua API)
+        val titulo = item.optString("name").ifEmpty { item.optString("title") }
+        val streamId = item.optInt("stream_id") // ID REAL DO VÍDEO NO SERVIDOR
+        val iconUrl = item.optString("stream_icon").ifEmpty { 
+            "https://image.tmdb.org/t/p/w500${item.optString("poster_path")}" 
+        }
 
         holder.tvName.text = titulo
         holder.tvName.visibility = View.GONE
 
         Glide.with(context)
-            .load(fullPosterUrl)
+            .load(iconUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.bg_logo_placeholder)
             .centerCrop() 
@@ -53,14 +56,13 @@ class HomeDestaquesFilmesAdapter(
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
             
-            // ✅ AQUI ESTÁ A CORREÇÃO:
-            // Não passamos o ID do site para a chave "stream_id".
-            // Deixamos a "stream_id" como 0 ou vazia para a DetailsActivity 
-            // saber que precisa pesquisar o filme no seu painel pelo Nome.
-            intent.putExtra("stream_id", 0) 
-            intent.putExtra("name", titulo) 
-            intent.putExtra("icon", fullPosterUrl)
-            intent.putExtra("rating", item.optString("vote_average", "0.0"))
+            // ✅ AQUI O PLAY VAI FUNCIONAR:
+            // Passamos o "stream_id" porque seu servidor e sua PlayerActivity
+            // usam exatamente essa chave para localizar o arquivo .mp4/.ts
+            intent.putExtra("stream_id", streamId) 
+            intent.putExtra("name", titulo)
+            intent.putExtra("icon", iconUrl)
+            intent.putExtra("rating", item.optString("rating", "0.0"))
             intent.putExtra("is_series", false) 
             
             context.startActivity(intent)
