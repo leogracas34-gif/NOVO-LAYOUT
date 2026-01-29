@@ -24,6 +24,8 @@ import org.json.JSONObject
 import java.net.URL
 import kotlin.random.Random
 import android.widget.Toast
+import androidx.recyclerview.widget.LinearLayoutManager // ADICIONADO PARA OS DESTAQUES
+
 // --- IMPORTS FIREBASE ATUALIZADOS PARA FIREBASE 34 ---
 import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.remoteConfig
@@ -34,17 +36,14 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val TMDB_API_KEY = "9b73f5dd15b8165b1b57419be2f29128"
     
-    // Timer para o Banner Rotativo
     private val bannerHandler = Handler(Looper.getMainLooper())
     private val bannerRunnable = object : Runnable {
         override fun run() {
-            carregarBannerAlternado()
-            bannerHandler.postDelayed(this, 30000) // Troca a cada 30 segundos
+            if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
+            bannerHandler.postDelayed(this, 30000)
         }
     }
 
-    // Altere para TRUE quando quiser fixar o banner de Futebol amanhã
-    // Agora o Firebase pode controlar isso automaticamente
     private var MODO_FUTEBOL_ATIVO = false 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,30 +51,28 @@ class HomeActivity : AppCompatActivity() {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // --- INICIALIZAÇÃO FIREBASE REMOTE CONFIG (ESTILO NOVO) ---
+        // --- INICIALIZAÇÃO FIREBASE REMOTE CONFIG ---
         val remoteConfig = Firebase.remoteConfig
         val configSettings = remoteConfigSettings {
-            minimumFetchIntervalInSeconds = 60 // Verifica mudanças a cada 1 minuto (ideal para jogos)
+            minimumFetchIntervalInSeconds = 60 
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         
-        // Busca as informações do Firebase
+        // 1. IMPLEMENTAÇÃO DO FUTEBOL VIA FIREBASE
         remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
-                // Sincroniza as variáveis com o painel do Google
                 MODO_FUTEBOL_ATIVO = remoteConfig.getBoolean("modo_futebol")
                 if (MODO_FUTEBOL_ATIVO) {
                     val titulo = remoteConfig.getString("futebol_titulo")
                     val desc = remoteConfig.getString("futebol_descricao")
                     val imagem = remoteConfig.getString("futebol_imagem")
                     
-                    // Aplica ao banner na hora
                     binding.tvBannerTitle.text = titulo
                     binding.tvBannerOverview.text = desc
+                    binding.tvBannerTitle.visibility = View.VISIBLE
                     binding.imgBannerLogo.visibility = View.GONE
                     
-                    // Ajustado .load(imagem.toString()) para evitar erro de ambiguidade no build
-                    Glide.with(this).load(imagem.toString()).centerCrop().into(binding.imgBanner)
+                    Glide.with(this).load(imagem).centerCrop().into(binding.imgBanner)
                 }
             }
         }
@@ -87,8 +84,36 @@ class HomeActivity : AppCompatActivity() {
         DownloadHelper.registerReceiver(this)
         setupClicks()
         
-        // Inicia o carrossel automático
+        // 2. IMPLEMENTAÇÃO DA SEÇÃO DE DESTAQUES E LANÇAMENTOS
+        carregarDestaquesAbaixo("movie") 
+
         bannerHandler.post(bannerRunnable)
+        
+        // --- FOCO ROBUSTO INICIAL (CONTROLE REMOTO) ---
+        binding.cardBanner.requestFocus() 
+    }
+
+    // FUNÇÃO ADICIONADA PARA LANÇAMENTOS E DESTAQUES
+    private fun carregarDestaquesAbaixo(tipo: String) {
+        val urlDestaques = "https://api.themoviedb.org/3/trending/$tipo/week?api_key=$TMDB_API_KEY&language=pt-BR"
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val jsonTxt = URL(urlDestaques).readText()
+                val results = JSONObject(jsonTxt).getJSONArray("results")
+                
+                withContext(Dispatchers.Main) {
+                    // Configura o RecyclerView debaixo do banner
+                    binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
+                    // Aqui você deve setar seu Adapter (ex: VodAdapter) passando 'results'
+                    // binding.rvRecentAdditions.adapter = VodAdapter(results)
+                    
+                    // Configuração de Foco Direcional Robusta
+                    binding.rvRecentAdditions.isFocusable = true
+                    binding.rvRecentAdditions.nextFocusUp = binding.cardBanner.id
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
     }
 
     override fun onResume() {
@@ -99,16 +124,26 @@ class HomeActivity : AppCompatActivity() {
             binding.etSearch.clearFocus()
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
-            binding.cardBanner.requestFocus()
+            
+            // Garante que o foco volta para o Banner ao retornar, se for TV
+            if (isTelevisionDevice()) {
+                binding.cardBanner.requestFocus()
+            }
         } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun isTelevisionDevice(): Boolean {
+        return packageManager.hasSystemFeature("android.software.leanback") || 
+               packageManager.hasSystemFeature("android.hardware.type.television")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        bannerHandler.removeCallbacks(bannerRunnable) // Para o timer ao fechar o app
+        bannerHandler.removeCallbacks(bannerRunnable)
     }
 
     private fun setupClicks() {
+        // --- CELULAR: CLIQUE ÚNICO MANTIDO / TV: FOCO ROBUSTO ---
         binding.etSearch.setOnClickListener {
             startActivity(Intent(this, SearchActivity::class.java).putExtra("initial_query", ""))
         }
@@ -123,6 +158,10 @@ class HomeActivity : AppCompatActivity() {
                 btn.alpha = if (hasFocus) 1f else 0.8f
             }
         }
+
+        // Lógica de navegação do controle remoto (Trilhos Fixos)
+        binding.cardBanner.nextFocusDown = binding.rvRecentAdditions.id
+        binding.cardBanner.nextFocusLeft = binding.cardLiveTv.id
 
         binding.cardLiveTv.setOnClickListener { startActivity(Intent(this, LiveTvActivity::class.java).putExtra("SHOW_PREVIEW", true)) }
         binding.cardMovies.setOnClickListener { startActivity(Intent(this, VodActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
@@ -142,16 +181,14 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardBanner.setOnClickListener {
             if (MODO_FUTEBOL_ATIVO) {
+                // Aqui você pode disparar a Intent para o canal de esportes direto
                 Toast.makeText(this, "Abrindo Jogo Ao Vivo...", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun carregarBannerAlternado() {
-        if (MODO_FUTEBOL_ATIVO) {
-            exibirBannerFutebol()
-            return
-        }
+        if (MODO_FUTEBOL_ATIVO) return
 
         val prefs = getSharedPreferences("vltv_home_prefs", Context.MODE_PRIVATE)
         val ultimoTipo = prefs.getString("ultimo_tipo_banner", "tv") ?: "tv"
@@ -169,7 +206,6 @@ class HomeActivity : AppCompatActivity() {
                 if (results.length() > 0) {
                     val randomIndex = Random.nextInt(results.length())
                     val item = results.getJSONObject(randomIndex)
-
                     val titulo = if (item.has("title")) item.getString("title") else item.getString("name")
                     val overview = item.optString("overview", "")
                     val backdropPath = item.optString("backdrop_path", "")
@@ -188,13 +224,6 @@ class HomeActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
-    }
-
-    private fun exibirBannerFutebol() {
-        binding.tvBannerTitle.text = "BRASILEIRÃO: FLAMENGO x ATLÉTICO"
-        binding.tvBannerOverview.text = "Acompanhe o clássico ao vivo agora no Premiere!"
-        binding.imgBannerLogo.visibility = View.GONE
-        Glide.with(this).load("URL_DA_IMAGEM_DO_JOGO").centerCrop().into(binding.imgBanner)
     }
 
     private fun buscarLogoOverlayHome(tmdbId: String, tipo: String) {
