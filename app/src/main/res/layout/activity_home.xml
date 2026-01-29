@@ -21,6 +21,7 @@
             android:focusable="true"
             android:clickable="true"
             android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusLeft="@id/cardLiveTv"
             android:nextFocusUp="@id/cardBanner"
             android:nextFocusDown="@id/rvRecentAdditions"
@@ -42,7 +43,8 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
                     android:padding="25dp"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:duplicateParentState="true">
                     <ImageView
                         android:id="@+id/imgBannerLogo"
                         android:layout_width="200dp"
@@ -86,6 +88,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:descendantFocusability="afterDescendants"
                 android:nextFocusUp="@id/cardBanner"
                 android:nextFocusLeft="@id/cardMovies" />
         </LinearLayout>
@@ -119,11 +123,14 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/etSearch"
             android:nextFocusDown="@id/cardLiveTv"
-            android:nextFocusRight="@id/cardBanner">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔍" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BUSCAR" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/cardBanner"
+            android:nextFocusLeft="@id/etSearch">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔍" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BUSCAR" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
 
         <LinearLayout
@@ -137,11 +144,14 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/etSearch"
             android:nextFocusDown="@id/cardMovies"
-            android:nextFocusRight="@id/cardBanner">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📺" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AO VIVO" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/cardBanner"
+            android:nextFocusLeft="@id/cardLiveTv">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📺" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AO VIVO" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
 
         <LinearLayout
@@ -155,11 +165,14 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/cardLiveTv"
             android:nextFocusDown="@id/cardSeries"
-            android:nextFocusRight="@id/cardBanner">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎬" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FILMES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/cardBanner"
+            android:nextFocusLeft="@id/cardMovies">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎬" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FILMES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
 
         <LinearLayout
@@ -173,11 +186,14 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/cardMovies"
             android:nextFocusDown="@id/cardKids"
-            android:nextFocusRight="@id/rvRecentAdditions">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍿" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SÉRIES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/rvRecentAdditions"
+            android:nextFocusLeft="@id/cardSeries">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍿" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SÉRIES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
 
         <LinearLayout
@@ -191,14 +207,17 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/cardSeries"
             android:nextFocusDown="@id/btnSettings"
-            android:nextFocusRight="@id/rvRecentAdditions">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎨" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KIDS" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/rvRecentAdditions"
+            android:nextFocusLeft="@id/cardKids">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎨" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KIDS" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
 
-        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:focusable="false"/>
 
         <LinearLayout
             android:id="@+id/btnSettings"
@@ -211,11 +230,14 @@
             android:background="@drawable/bg_menu_focus"
             android:focusable="true"
             android:clickable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="blocksDescendants"
             android:nextFocusUp="@id/cardKids"
             android:nextFocusDown="@id/btnSettings"
-            android:nextFocusRight="@id/rvRecentAdditions">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚙️" android:textSize="18sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AJUSTES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp"/>
+            android:nextFocusRight="@id/rvRecentAdditions"
+            android:nextFocusLeft="@id/btnSettings">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚙️" android:textSize="18sp" android:duplicateParentState="true"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AJUSTES" android:textColor="#E0E0E0" android:textSize="8sp" android:textStyle="bold" android:layout_marginTop="2dp" android:duplicateParentState="true"/>
         </LinearLayout>
     </LinearLayout>
 
