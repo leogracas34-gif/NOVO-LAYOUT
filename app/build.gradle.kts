@@ -73,6 +73,6 @@ dependencies {
 
     // --- FIREBASE STACK (ATUALIZADO) ---
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-config-ktx") // Adicionado para o banner remoto
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-config") // Adicionado para o banner remoto
 }
