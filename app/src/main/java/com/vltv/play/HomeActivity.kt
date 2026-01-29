@@ -106,12 +106,9 @@ class HomeActivity : AppCompatActivity() {
                     // Configura o RecyclerView debaixo do banner
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
                     
-                    // --- MANTENDO O PADRÃO: VOCÊ DEVE CONECTAR SEU ADAPTER AQUI ---
-                    // Exemplo: binding.rvRecentAdditions.adapter = VodAdapter(results)
-                    
-                    // Configuração de Foco Direcional Robusta para TV
+                    // Configuração de Foco Direcional Robusta para TV (CORRIGIDO: adicionado 'Id')
                     binding.rvRecentAdditions.isFocusable = true
-                    binding.rvRecentAdditions.nextFocusUp = binding.cardBanner.id
+                    binding.rvRecentAdditions.nextFocusUpId = binding.cardBanner.id
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -159,12 +156,12 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        // Lógica de navegação do controle remoto (Trilhos Fixos)
-        binding.cardBanner.nextFocusDown = binding.rvRecentAdditions.id
-        binding.cardBanner.nextFocusLeft = binding.cardLiveTv.id
+        // Lógica de navegação do controle remoto (CORRIGIDO: adicionado 'Id')
+        binding.cardBanner.nextFocusDownId = binding.rvRecentAdditions.id
+        binding.cardBanner.nextFocusLeftId = binding.cardLiveTv.id
         
-        // Garante que o RecyclerView saiba voltar para o menu à esquerda
-        binding.rvRecentAdditions.nextFocusLeft = binding.cardMovies.id
+        // Garante que o RecyclerView saiba voltar para o menu à esquerda (CORRIGIDO: adicionado 'Id')
+        binding.rvRecentAdditions.nextFocusLeftId = binding.cardMovies.id
 
         binding.cardLiveTv.setOnClickListener { startActivity(Intent(this, LiveTvActivity::class.java).putExtra("SHOW_PREVIEW", true)) }
         binding.cardMovies.setOnClickListener { startActivity(Intent(this, VodActivity::class.java).putExtra("SHOW_PREVIEW", false)) }
@@ -184,7 +181,6 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardBanner.setOnClickListener {
             if (MODO_FUTEBOL_ATIVO) {
-                // Se estiver no modo futebol, abre a TV ao vivo direto
                 startActivity(Intent(this, LiveTvActivity::class.java))
             }
         }
