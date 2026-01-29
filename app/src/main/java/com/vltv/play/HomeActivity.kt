@@ -112,7 +112,7 @@ class HomeActivity : AppCompatActivity() {
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
                     
                     // ✅ Conecta o novo Adapter Único que criamos
-                    val adapter = HomeDestaquesAdapter(this@HomeActivity, listaItens) { item ->
+                    val adapter = HomeDestaquesFilmesAdapter(this@HomeActivity, listaItens) { item ->
                         // 📺 Ao focar no item, atualiza o banner com a sinopse discretamente
                         exibirPreviewNoBanner(item)
                     }
