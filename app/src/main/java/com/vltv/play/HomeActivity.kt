@@ -102,16 +102,47 @@ class HomeActivity : AppCompatActivity() {
                 val jsonTxt = URL(urlDestaques).readText()
                 val results = JSONObject(jsonTxt).getJSONArray("results")
                 
+                // ✅ Converte o JSONArray em uma lista de objetos para o Adapter
+                val listaItens = mutableListOf<JSONObject>()
+                for (i in 0 until results.length()) {
+                    listaItens.add(results.getJSONObject(i))
+                }
+
                 withContext(Dispatchers.Main) {
-                    // Configura o RecyclerView debaixo do banner
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
                     
-                    // Configuração de Foco Direcional Robusta para TV (CORRIGIDO: adicionado 'Id')
+                    // ✅ Conecta o novo Adapter Único que criamos
+                    val adapter = HomeDestaquesAdapter(this@HomeActivity, listaItens) { item ->
+                        // 📺 Ao focar no item, atualiza o banner com a sinopse discretamente
+                        exibirPreviewNoBanner(item)
+                    }
+                    binding.rvRecentAdditions.adapter = adapter
+                    
                     binding.rvRecentAdditions.isFocusable = true
                     binding.rvRecentAdditions.nextFocusUpId = binding.cardBanner.id
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
+    }
+
+    // ✅ NOVA FUNÇÃO: Atualiza o banner quando o foco para no lançamento
+    private fun exibirPreviewNoBanner(item: JSONObject) {
+        val titulo = if (item.has("title")) item.getString("title") else item.getString("name")
+        val sinopse = item.optString("overview", "")
+        val backdrop = item.optString("backdrop_path", "")
+        val id = item.optString("id")
+        val tipo = if (item.has("title")) "movie" else "tv"
+
+        binding.tvBannerTitle.text = titulo
+        binding.tvBannerOverview.text = sinopse
+        
+        Glide.with(this)
+            .load("https://image.tmdb.org/t/p/original$backdrop")
+            .centerCrop()
+            .into(binding.imgBanner)
+
+        // Busca a logo discretamente para o banner
+        buscarLogoOverlayHome(id, tipo)
     }
 
     override fun onResume() {
@@ -140,7 +171,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupClicks() {
-        // --- CELULAR: CLIQUE ÚNICO MANTIDO / TV: FOCO ROBUSTO ---
         binding.etSearch.setOnClickListener {
             startActivity(Intent(this, SearchActivity::class.java).putExtra("initial_query", ""))
         }
@@ -156,11 +186,9 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        // Lógica de navegação do controle remoto (CORRIGIDO: adicionado 'Id')
         binding.cardBanner.nextFocusDownId = binding.rvRecentAdditions.id
         binding.cardBanner.nextFocusLeftId = binding.cardLiveTv.id
         
-        // Garante que o RecyclerView saiba voltar para o menu à esquerda (CORRIGIDO: adicionado 'Id')
         binding.rvRecentAdditions.nextFocusLeftId = binding.cardMovies.id
 
         binding.cardLiveTv.setOnClickListener { startActivity(Intent(this, LiveTvActivity::class.java).putExtra("SHOW_PREVIEW", true)) }
@@ -214,7 +242,7 @@ class HomeActivity : AppCompatActivity() {
                         binding.tvBannerTitle.text = titulo
                         binding.tvBannerOverview.text = overview
                         Glide.with(this@HomeActivity)
-                            .load("https://image.tmdb.org/t/p/original$backdropPath")
+                            .load("https://image.tmdb.org/p/original$backdropPath")
                             .centerCrop()
                             .into(binding.imgBanner)
                         
