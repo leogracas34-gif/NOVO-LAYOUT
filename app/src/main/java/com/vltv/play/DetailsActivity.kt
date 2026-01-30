@@ -2,13 +2,9 @@ package com.vltv.play
 
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,8 +18,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.Priority
-import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -31,14 +25,7 @@ import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
-import com.vltv.play.CastMember
-import com.vltv.play.CastAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-// ✅ MANTIDO: EpisodeData
 data class EpisodeData(
     val streamId: Int,
     val season: Int,
@@ -55,11 +42,10 @@ class DetailsActivity : AppCompatActivity() {
     private var rating: String = "0.0"
     private var isSeries: Boolean = false
     private var episodes: List<EpisodeData> = emptyList()
-    private var hasResumePosition: Boolean = false
 
     private lateinit var imgPoster: ImageView
     private lateinit var tvTitle: TextView
-    private lateinit var imgTitleLogo: ImageView // ✅ ADICIONADO PARA LOGO TMDB
+    private lateinit var imgTitleLogo: ImageView 
     private lateinit var tvRating: TextView
     private lateinit var tvGenre: TextView
     private lateinit var tvCast: TextView
@@ -73,20 +59,17 @@ class DetailsActivity : AppCompatActivity() {
     private lateinit var imgBackground: ImageView
     private lateinit var tvEpisodesTitle: TextView
     private lateinit var recyclerEpisodes: RecyclerView
-    
     private var tvYear: TextView? = null
     private var btnSettings: Button? = null
 
     private lateinit var episodesAdapter: EpisodesAdapter
     private enum class DownloadState { BAIXAR, BAIXANDO, BAIXADO }
     private var downloadState: DownloadState = DownloadState.BAIXAR
-
     private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_details)
-
         configurarTelaTV()
         
         streamId = intent.getIntExtra("stream_id", 0)
@@ -100,12 +83,13 @@ class DetailsActivity : AppCompatActivity() {
         setupEventos()
         setupEpisodesRecycler()
 
-        // ✅ ACELERAÇÃO: Carrega Sinopse, Elenco e LOGO salvos
         tentarCarregarTextoCache()
         tentarCarregarLogoCache()
 
         sincronizarDadosTMDB()
     }
+
+    // ... (configurarTelaTV, inicializarViews, carregarConteudo, tentarCarregarTextoCache, tentarCarregarLogoCache MANTIDOS IGUAIS) ...
 
     private fun configurarTelaTV() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -119,11 +103,8 @@ class DetailsActivity : AppCompatActivity() {
     private fun inicializarViews() {
         imgPoster = findViewById(R.id.imgPoster)
         tvTitle = findViewById(R.id.tvTitle)
-        imgTitleLogo = findViewById(R.id.imgTitleLogo) // ✅ INICIALIZADO
-        
-        // Texto invisível por padrão até a logo ou cache carregar
+        imgTitleLogo = findViewById(R.id.imgTitleLogo)
         tvTitle.visibility = View.INVISIBLE 
-
         tvRating = findViewById(R.id.tvRating)
         tvGenre = findViewById(R.id.tvGenre)
         tvCast = findViewById(R.id.tvCast)
@@ -139,7 +120,6 @@ class DetailsActivity : AppCompatActivity() {
         recyclerEpisodes = findViewById(R.id.recyclerEpisodes)
         tvYear = findViewById(R.id.tvYear)
         btnSettings = findViewById(R.id.btnSettings)
-
         if (isTelevisionDevice()) btnDownloadArea.visibility = View.GONE
         btnPlay.isFocusable = true
         btnResume.isFocusable = true
@@ -152,13 +132,10 @@ class DetailsActivity : AppCompatActivity() {
         tvPlot.text = "Buscando detalhes..."
         tvGenre.text = "Gênero: ..."
         tvCast.text = "Elenco:"
-        
         Glide.with(this).load(icon).diskCacheStrategy(DiskCacheStrategy.ALL).into(imgPoster)
         Glide.with(this).load(icon).centerCrop().diskCacheStrategy(DiskCacheStrategy.ALL).into(imgBackground)
-
         val isFavInicial = getFavMovies(this).contains(streamId)
         atualizarIconeFavorito(isFavInicial)
-
         if (isSeries) carregarEpisodios() else {
             tvEpisodesTitle.visibility = View.GONE
             recyclerEpisodes.visibility = View.GONE
@@ -176,7 +153,6 @@ class DetailsActivity : AppCompatActivity() {
         prefs.getString("year_$streamId", null)?.let { tvYear?.text = it }
     }
 
-    // ✅ NOVO: Tenta carregar a logo do cache SharedPreferences
     private fun tentarCarregarLogoCache() {
         val prefs = getSharedPreferences("vltv_logos_cache", Context.MODE_PRIVATE)
         val cachedUrl = prefs.getString("movie_logo_$streamId", null)
@@ -185,10 +161,11 @@ class DetailsActivity : AppCompatActivity() {
             imgTitleLogo.visibility = View.VISIBLE
             Glide.with(this).load(cachedUrl).diskCacheStrategy(DiskCacheStrategy.ALL).into(imgTitleLogo)
         } else {
-            tvTitle.visibility = View.VISIBLE // Fallback caso não tenha cache
+            tvTitle.visibility = View.VISIBLE 
         }
     }
 
+    // ✅ CORREÇÃO 1: Adicionado `&region=BR` para forçar títulos em Português
     private fun sincronizarDadosTMDB() {
         val apiKey = "9b73f5dd15b8165b1b57419be2f29128"
         val type = if (isSeries) "tv" else "movie"
@@ -198,7 +175,8 @@ class DetailsActivity : AppCompatActivity() {
         lixo.forEach { clean = clean.replace(it, "", ignoreCase = true) }
         val encoded = URLEncoder.encode(clean.replace(Regex("\\s+"), " "), "UTF-8")
         
-        val url = "https://api.themoviedb.org/3/search/$type?api_key=$apiKey&query=$encoded&language=pt-BR"
+        // Adicionei &region=BR para o site priorizar Brasil
+        val url = "https://api.themoviedb.org/3/search/$type?api_key=$apiKey&query=$encoded&language=pt-BR&region=BR"
 
         client.newCall(Request.Builder().url(url).build()).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { runOnUiThread { tvTitle.visibility = View.VISIBLE } }
@@ -210,7 +188,7 @@ class DetailsActivity : AppCompatActivity() {
                         val selected = results.getJSONObject(0)
                         val idTmdb = selected.getInt("id")
                         
-                        buscarLogoTMDB(idTmdb, type, apiKey) // ✅ BUSCA A LOGO
+                        buscarLogoTMDB(idTmdb, type, apiKey) 
                         buscarDetalhesCompletos(idTmdb, type, apiKey)
 
                         runOnUiThread {
@@ -218,7 +196,7 @@ class DetailsActivity : AppCompatActivity() {
                             val sinopse = selected.optString("overview")
                             val date = if (isSeries) selected.optString("first_air_date") else selected.optString("release_date")
                             
-                            tvTitle.text = tOficial
+                            tvTitle.text = tOficial // Agora pega o título em PT-BR que veio do site
                             if (sinopse.isNotEmpty()) tvPlot.text = sinopse
                             if (date.length >= 4) tvYear?.text = date.substring(0, 4)
 
@@ -232,8 +210,9 @@ class DetailsActivity : AppCompatActivity() {
         })
     }
 
-    // ✅ NOVO: Busca e salva a logo do filme
+    // ✅ CORREÇÃO 2: Loop para achar o Logo PT-BR
     private fun buscarLogoTMDB(id: Int, type: String, key: String) {
+        // Pede logos em PT e EN
         val imagesUrl = "https://api.themoviedb.org/3/$type/$id/images?api_key=$key&include_image_language=pt,en,null"
         client.newCall(Request.Builder().url(imagesUrl).build()).enqueue(object : Callback {
             override fun onResponse(call: Call, response: Response) {
@@ -241,9 +220,26 @@ class DetailsActivity : AppCompatActivity() {
                 try {
                     val logos = JSONObject(body).optJSONArray("logos")
                     if (logos != null && logos.length() > 0) {
-                        val path = logos.getJSONObject(0).getString("file_path")
-                        val finalUrl = "https://image.tmdb.org/t/p/w500$path"
+                        
+                        var finalPath = ""
+                        
+                        // 1. TENTA ACHAR LOGO EM PORTUGUÊS (PT)
+                        for (i in 0 until logos.length()) {
+                            val lg = logos.getJSONObject(i)
+                            if (lg.optString("iso_639_1") == "pt") {
+                                finalPath = lg.getString("file_path")
+                                break // Achou! Para de procurar.
+                            }
+                        }
+
+                        // 2. SE NÃO ACHOU, PEGA O PRIMEIRO DA LISTA (INGLÊS/MELHOR RANK)
+                        if (finalPath.isEmpty()) {
+                            finalPath = logos.getJSONObject(0).getString("file_path")
+                        }
+
+                        val finalUrl = "https://image.tmdb.org/t/p/w500$finalPath"
                         getSharedPreferences("vltv_logos_cache", Context.MODE_PRIVATE).edit().putString("movie_logo_$streamId", finalUrl).apply()
+                        
                         runOnUiThread {
                             tvTitle.visibility = View.GONE
                             imgTitleLogo.visibility = View.VISIBLE
@@ -275,7 +271,7 @@ class DetailsActivity : AppCompatActivity() {
                     }
                     runOnUiThread {
                         val g = "Gênero: ${genresList.joinToString(", ")}"
-                        val e = "Elenco: ${castNamesList.joinToString(", ")}" // ✅ MANTIDO EM TEXTO
+                        val e = "Elenco: ${castNamesList.joinToString(", ")}"
                         tvGenre.text = g
                         tvCast.text = e
                         getSharedPreferences("vltv_text_cache", Context.MODE_PRIVATE).edit()
@@ -307,7 +303,6 @@ class DetailsActivity : AppCompatActivity() {
         recyclerEpisodes.visibility = View.VISIBLE
     }
 
-    // ✅ MANTIDO: Eventos, Cliques e DPAD
     private fun setupEventos() {
         val zoomFocus = View.OnFocusChangeListener { v, hasFocus ->
             v.scaleX = if (hasFocus) 1.1f else 1.0f
