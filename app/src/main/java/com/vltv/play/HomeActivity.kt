@@ -36,10 +36,20 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val TMDB_API_KEY = "9b73f5dd15b8165b1b57419be2f29128"
     
+    private var ALGUEM_FOCADO_NA_LISTA = false // Controle para pausar banner quando usuário navega
+
     private val bannerHandler = Handler(Looper.getMainLooper())
     private val bannerRunnable = object : Runnable {
         override fun run() {
-            if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
+            if (!MODO_FUTEBOL_ATIVO && !ALGUEM_FOCADO_NA_LISTA) {
+                // Sorteia entre Anúncio (se configurado no Firebase) e Filme
+                val deveMostrarAnuncio = Random.nextBoolean() // 50% chance
+                if (deveMostrarAnuncio && Firebase.remoteConfig.getBoolean("tem_anuncio")) {
+                    carregarAnuncioFirebase()
+                } else {
+                    carregarBannerAlternado()
+                }
+            }
             bannerHandler.postDelayed(this, 30000)
         }
     }
@@ -114,12 +124,23 @@ class HomeActivity : AppCompatActivity() {
                     // ✅ Conecta o novo Adapter Único que criamos
                     val adapter = HomeDestaquesFilmesAdapter(this@HomeActivity, listaItens) { item ->
                         // 📺 Ao focar no item, atualiza o banner com a sinopse discretamente
+                        ALGUEM_FOCADO_NA_LISTA = true
                         exibirPreviewNoBanner(item)
                     }
                     binding.rvRecentAdditions.adapter = adapter
                     
+                    // ✅ CORREÇÃO BANNER CINZA: Carrega o primeiro item imediatamente se não houver futebol
+                    if (listaItens.isNotEmpty() && !MODO_FUTEBOL_ATIVO) {
+                         exibirPreviewNoBanner(listaItens[0])
+                    }
+
                     binding.rvRecentAdditions.isFocusable = true
                     binding.rvRecentAdditions.nextFocusUpId = binding.cardBanner.id
+                    
+                    // Detecta quando perde o foco para voltar a rodar o banner aleatório
+                    binding.rvRecentAdditions.setOnFocusChangeListener { _, hasFocus ->
+                        if (!hasFocus) ALGUEM_FOCADO_NA_LISTA = false
+                    }
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -138,11 +159,32 @@ class HomeActivity : AppCompatActivity() {
         
         Glide.with(this)
             .load("https://image.tmdb.org/t/p/original$backdrop")
+            .placeholder(R.drawable.bg_logo_placeholder) // Placeholder para evitar cinza
             .centerCrop()
             .into(binding.imgBanner)
 
         // Busca a logo discretamente para o banner
         buscarLogoOverlayHome(id, tipo)
+    }
+
+    // ✅ NOVA FUNÇÃO: Carrega Anúncio do Firebase
+    private fun carregarAnuncioFirebase() {
+        val remoteConfig = Firebase.remoteConfig
+        val imgUrl = remoteConfig.getString("anuncio_imagem") // Use a chave correta do seu Firebase
+        val titulo = remoteConfig.getString("anuncio_titulo")
+        val desc = remoteConfig.getString("anuncio_descricao")
+
+        if (imgUrl.isNotEmpty()) {
+            binding.tvBannerTitle.text = titulo
+            binding.tvBannerOverview.text = desc
+            binding.tvBannerTitle.visibility = View.VISIBLE
+            binding.imgBannerLogo.visibility = View.GONE
+            
+            Glide.with(this).load(imgUrl).centerCrop().into(binding.imgBanner)
+        } else {
+            // Se não tiver anuncio configurado, volta pro banner normal
+            carregarBannerAlternado()
+        }
     }
 
     override fun onResume() {
@@ -242,7 +284,7 @@ class HomeActivity : AppCompatActivity() {
                         binding.tvBannerTitle.text = titulo
                         binding.tvBannerOverview.text = overview
                         Glide.with(this@HomeActivity)
-                            .load("https://image.tmdb.org/p/original$backdropPath")
+                            .load("https://image.tmdb.org/t/p/original$backdropPath")
                             .centerCrop()
                             .into(binding.imgBanner)
                         
