@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.LayoutInflater // ✅ ADICIONADO PARA CORRIGIR O ERRO
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -28,9 +29,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.Normalizer // Necessário para a busca inteligente
+import java.text.Normalizer 
 
-// ✅ MANTIDO: EpisodeData
+// ✅ MANTIDO: Data Class
 data class EpisodeData(
     val streamId: Int,
     val season: Int,
@@ -93,11 +94,10 @@ class DetailsActivity : AppCompatActivity() {
         tentarCarregarLogoCache()
         
         // ==================================================================
-        // 🛠️ A ÚNICA ALTERAÇÃO NO SEU CÓDIGO (PARA FUNCIONAR A HOME)
+        // 🛠️ LÓGICA DE PONTE (TMDB -> SERVIDOR)
         // ==================================================================
         if (intent.getBooleanExtra("from_highlights", false)) {
             // Se veio da Home, o ID está "errado" (é do TMDB).
-            // Precisamos achar o ID "certo" no servidor.
             btnPlay.text = "Sincronizando..."
             btnPlay.isEnabled = false
             buscarIdRealNoServidor(name)
@@ -107,7 +107,7 @@ class DetailsActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ FUNÇÃO NOVA: Busca o ID real sem mudar sua estrutura
+    // ✅ FUNÇÃO DE BUSCA E CORREÇÃO DE ID
     private fun buscarIdRealNoServidor(nomeTMDB: String) {
         val prefs = getSharedPreferences("vltv_prefs", MODE_PRIVATE)
         val user = prefs.getString("username", "") ?: ""
@@ -139,7 +139,9 @@ class DetailsActivity : AppCompatActivity() {
                         }
                         
                         val nomeItemLimpo = limpar(n)
-                        if (nomeItemLimpo.contains(nomeAlvo) || nomeAlvo.contains(nomeItemLimpo)) {
+                        
+                        // Lógica de comparação flexível
+                        if (nomeItemLimpo == nomeAlvo || nomeItemLimpo.contains(nomeAlvo) || nomeAlvo.contains(nomeItemLimpo)) {
                             idEncontrado = id
                             break
                         }
@@ -150,9 +152,8 @@ class DetailsActivity : AppCompatActivity() {
                             streamId = idEncontrado // ✅ ATUALIZA O ID!
                             btnPlay.text = "Assistir"
                             btnPlay.isEnabled = true
-                            Toast.makeText(this@DetailsActivity, "Sincronizado!", Toast.LENGTH_SHORT).show()
-                            // Agora busca os dados visuais (logo/sinopse)
-                            sincronizarDadosTMDB()
+                            // Toast.makeText(this@DetailsActivity, "Sincronizado!", Toast.LENGTH_SHORT).show()
+                            sincronizarDadosTMDB() // Carrega logo e sinopse visualmente
                         } else {
                             btnPlay.text = "Indisponível"
                             tvPlot.text = "Conteúdo ainda não disponível no servidor."
@@ -456,6 +457,7 @@ class DetailsActivity : AppCompatActivity() {
 
     private fun isTelevisionDevice() = packageManager.hasSystemFeature("android.software.leanback") || packageManager.hasSystemFeature("android.hardware.type.television")
 
+    // ✅ IMPORT CORRIGIDO AQUI PARA O ADAPTER
     inner class EpisodesAdapter(private val onEpisodeClick: (EpisodeData) -> Unit) : ListAdapter<EpisodeData, EpisodesAdapter.ViewHolder>(DiffCallback) {
         override fun onCreateViewHolder(p: ViewGroup, t: Int) = ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_episode, p, false))
         override fun onBindViewHolder(h: ViewHolder, p: Int) = h.bind(getItem(p))
