@@ -12,7 +12,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import org.json.JSONObject
 
-// MANTIVE O NOME ANTIGO DA CLASSE PARA VOCÊ NÃO TER QUE RENOMEAR O ARQUIVO
 class HomeDestaquesFilmesAdapter(
     private val context: Context,
     private val items: List<JSONObject>
@@ -25,20 +24,20 @@ class HomeDestaquesFilmesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
-        // ✅ CONTROLE REMOTO: Garante que o item seja focável na TV
-        v.isFocusable = true
-        v.isFocusableInTouchMode = true
+        
+        // ✅ CORREÇÃO CRÍTICA PARA HÍBRIDO (TV + CELULAR):
+        v.isFocusable = true            // Necessário para o Controle Remoto da TV navegar
+        v.isFocusableInTouchMode = false // ✅ ISSO GARANTE QUE NO CELULAR SEJA SÓ 1 CLIQUE
+        
         return VH(v)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        // LÓGICA HÍBRIDA: Detecta se é Filme ou Série automaticamente
-        // Se tiver o campo "name", é série. Se tiver "title", é filme.
+        // Detecção Automática: Filme ou Série
         val isSeries = item.has("name") 
         val titulo = if (isSeries) item.getString("name") else item.optString("title")
-        
         val poster = item.optString("poster_path", "")
         val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
 
@@ -52,24 +51,18 @@ class HomeDestaquesFilmesAdapter(
             .centerCrop() 
             .into(holder.imgPoster)
 
-        // ✅ CLIQUE INTELIGENTE
+        // ✅ CLIQUE (Funciona com Toque no Celular e "Enter" na TV)
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
-            // Envia os dados básicos
             intent.putExtra("stream_id", item.optInt("id")) 
             intent.putExtra("name", titulo)
             intent.putExtra("icon", fullPosterUrl)
-            
-            // Define se é série ou filme baseado na detecção acima
             intent.putExtra("is_series", isSeries) 
-            
-            // Avisa a DetailsActivity para buscar o ID real no servidor
             intent.putExtra("from_highlights", true) 
-            
             context.startActivity(intent)
         }
 
-        // ✅ FOCO (ZOOM)
+        // ✅ VISUAL (Apenas muda o tamanho/zoom, não interfere no clique)
         holder.itemView.setOnFocusChangeListener { view, hasFocus ->
             view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
                 .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
