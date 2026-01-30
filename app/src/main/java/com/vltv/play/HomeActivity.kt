@@ -30,7 +30,6 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val TMDB_API_KEY = "9b73f5dd15b8165b1b57419be2f29128"
     
-    // Banner rotativo (Cima) continua usando TMDB para ficar bonito (apenas visual)
     private val bannerHandler = Handler(Looper.getMainLooper())
     private val bannerRunnable = object : Runnable {
         override fun run() {
@@ -50,7 +49,6 @@ class HomeActivity : AppCompatActivity() {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Configuração Firebase
         val remoteConfig = Firebase.remoteConfig
         remoteConfig.setConfigSettingsAsync(remoteConfigSettings { minimumFetchIntervalInSeconds = 60 })
         remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
@@ -78,7 +76,7 @@ class HomeActivity : AppCompatActivity() {
 
         binding.cardBanner.requestFocus() 
         
-        // ✅ AQUI ESTÁ A CORREÇÃO: Carrega direto do XTREAM CODES
+        // Carrega a lista do servidor com a nova ordenação
         carregarRecentesDoServidor()
     }
 
@@ -91,36 +89,36 @@ class HomeActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // 1. Baixa listas completas do servidor (Isso garante o ID correto)
+                // 1. Baixa listas
                 val filmesRaw = XtreamApi.service.getAllVodStreams(user, pass).execute().body() ?: emptyList()
                 val seriesRaw = XtreamApi.service.getAllSeries(user, pass).execute().body() ?: emptyList()
 
-                // 2. Ordena pelo ID (Maior ID = Mais novo) e pega os top 20 de cada
-                val filmesRecentes = filmesRaw.sortedByDescending { it.stream_id }.take(20)
-                val seriesRecentes = seriesRaw.sortedByDescending { it.series_id }.take(20)
+                // 2. ORDENAÇÃO CORRETA POR DATA DE ADIÇÃO (Timestamp)
+                // O Xtream manda um campo chamado "added" (data de upload).
+                // Ordenamos descending (do maior timestamp para o menor).
+                val filmesRecentes = filmesRaw.sortedByDescending { it.added?.toLongOrNull() ?: 0L }.take(20)
+                val seriesRecentes = seriesRaw.sortedByDescending { it.last_modified?.toLongOrNull() ?: 0L }.take(20)
 
                 val listaMista = mutableListOf<JSONObject>()
                 val maxLen = maxOf(filmesRecentes.size, seriesRecentes.size)
 
-                // 3. Mistura (Intercala) e cria JSON para o Adapter
+                // 3. Mistura
                 for (i in 0 until maxLen) {
-                    // Adiciona Filme
                     if (i < filmesRecentes.size) {
                         val f = filmesRecentes[i]
                         val obj = JSONObject()
-                        obj.put("id", f.stream_id)             // ✅ ID REAL DO SERVIDOR
+                        obj.put("id", f.stream_id)
                         obj.put("name", f.name)
-                        obj.put("poster_path", f.stream_icon)  // ✅ URL DA CAPA DO SERVIDOR
+                        obj.put("poster_path", f.stream_icon)
                         obj.put("is_series", false)
                         listaMista.add(obj)
                     }
-                    // Adiciona Série
                     if (i < seriesRecentes.size) {
                         val s = seriesRecentes[i]
                         val obj = JSONObject()
-                        obj.put("id", s.series_id)             // ✅ ID REAL DO SERVIDOR
+                        obj.put("id", s.series_id)
                         obj.put("name", s.name)
-                        obj.put("poster_path", s.cover)        // ✅ URL DA CAPA DO SERVIDOR
+                        obj.put("poster_path", s.cover)
                         obj.put("is_series", true)
                         listaMista.add(obj)
                     }
@@ -128,9 +126,8 @@ class HomeActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
-                    
-                    // Chama o Adapter (veja código abaixo)
-                    val adapter = HomeDestaquesFilmesAdapter(this@HomeActivity, listaMista)
+                    // Usa o NOVO Adapter Universal
+                    val adapter = HomeUniversalAdapter(this@HomeActivity, listaMista)
                     binding.rvRecentAdditions.adapter = adapter
                     
                     binding.rvRecentAdditions.isFocusable = true
