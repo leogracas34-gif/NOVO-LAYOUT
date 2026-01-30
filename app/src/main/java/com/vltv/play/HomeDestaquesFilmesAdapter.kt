@@ -30,6 +30,7 @@ class HomeDestaquesFilmesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
+        // Garante foco no controle remoto
         v.isFocusable = true
         v.isFocusableInTouchMode = true
         return VH(v)
@@ -38,7 +39,8 @@ class HomeDestaquesFilmesAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        val titulo = if (item.has("title")) item.getString("title") else item.optString("name", "")
+        // Tratamento de titulo para funcionar com TMDB ou Painel
+        val titulo = if (item.has("title")) item.getString("title") else item.optString("name")
         val poster = item.optString("poster_path", "")
         val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
 
@@ -54,13 +56,18 @@ class HomeDestaquesFilmesAdapter(
 
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
-            // Enviamos o ID do TMDB para a sinopse e logo
+            
+            // Enviamos o ID do TMDB (que o site usa)
             intent.putExtra("stream_id", item.optInt("id")) 
             intent.putExtra("name", titulo)
             intent.putExtra("icon", fullPosterUrl)
+            intent.putExtra("rating", item.optString("vote_average", "0.0"))
             intent.putExtra("is_series", false)
-            // Tag para a DetailsActivity saber que precisa buscar o ID de vídeo no servidor
+            
+            // ✅ AVISO IMPORTANTE: Dizemos à DetailsActivity que isso veio dos Destaques
+            // para ela procurar o ID real no servidor.
             intent.putExtra("from_highlights", true) 
+            
             context.startActivity(intent)
         }
 
@@ -68,13 +75,14 @@ class HomeDestaquesFilmesAdapter(
             view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
                 .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
             
+            holder.tvName.visibility = if (hasFocus) View.VISIBLE else View.GONE
+
             if (hasFocus) {
-                holder.tvName.visibility = View.VISIBLE
+                // Dispara o preview no banner após 1.5s de foco
                 runnable?.let { handler.removeCallbacks(it) }
                 runnable = Runnable { onItemSelected(item) }
                 handler.postDelayed(runnable!!, 1500)
             } else {
-                holder.tvName.visibility = View.GONE
                 runnable?.let { handler.removeCallbacks(it) }
             }
         }
