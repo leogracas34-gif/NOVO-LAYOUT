@@ -11,17 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import org.json.JSONObject
-import android.os.Handler
-import android.os.Looper
 
+// ✅ REMOVIDO: Callback "onItemSelected". O adapter não precisa mais falar com a Home.
 class HomeDestaquesFilmesAdapter(
     private val context: Context,
-    private val items: List<JSONObject>,
-    private val onItemSelected: (JSONObject) -> Unit
+    private val items: List<JSONObject>
 ) : RecyclerView.Adapter<HomeDestaquesFilmesAdapter.VH>() {
-
-    private val handler = Handler(Looper.getMainLooper())
-    private var runnable: Runnable? = null
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val imgPoster: ImageView = v.findViewById(R.id.imgPoster)
@@ -30,7 +25,6 @@ class HomeDestaquesFilmesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
-        // Garante foco no controle remoto
         v.isFocusable = true
         v.isFocusableInTouchMode = true
         return VH(v)
@@ -39,7 +33,6 @@ class HomeDestaquesFilmesAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        // Tratamento de titulo para funcionar com TMDB ou Painel
         val titulo = if (item.has("title")) item.getString("title") else item.optString("name")
         val poster = item.optString("poster_path", "")
         val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
@@ -54,37 +47,22 @@ class HomeDestaquesFilmesAdapter(
             .centerCrop() 
             .into(holder.imgPoster)
 
+        // ✅ CLIQUE: Mantém a lógica de enviar para a DetailsActivity buscar o ID
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
-            
-            // Enviamos o ID do TMDB (que o site usa)
             intent.putExtra("stream_id", item.optInt("id")) 
             intent.putExtra("name", titulo)
             intent.putExtra("icon", fullPosterUrl)
-            intent.putExtra("rating", item.optString("vote_average", "0.0"))
-            intent.putExtra("is_series", false)
-            
-            // ✅ AVISO IMPORTANTE: Dizemos à DetailsActivity que isso veio dos Destaques
-            // para ela procurar o ID real no servidor.
-            intent.putExtra("from_highlights", true) 
-            
+            intent.putExtra("from_highlights", true) // Continua avisando que veio do site
             context.startActivity(intent)
         }
 
+        // ✅ FOCO: Apenas efeito visual (Zoom). Não altera mais o banner.
         holder.itemView.setOnFocusChangeListener { view, hasFocus ->
             view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
                 .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
             
             holder.tvName.visibility = if (hasFocus) View.VISIBLE else View.GONE
-
-            if (hasFocus) {
-                // Dispara o preview no banner após 1.5s de foco
-                runnable?.let { handler.removeCallbacks(it) }
-                runnable = Runnable { onItemSelected(item) }
-                handler.postDelayed(runnable!!, 1500)
-            } else {
-                runnable?.let { handler.removeCallbacks(it) }
-            }
         }
     }
 
