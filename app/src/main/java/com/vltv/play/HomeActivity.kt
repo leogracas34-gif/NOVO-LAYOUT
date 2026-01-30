@@ -21,6 +21,7 @@ import org.json.JSONObject
 import java.net.URL
 import kotlin.random.Random
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ConcatAdapter
 import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
@@ -70,13 +71,10 @@ class HomeActivity : AppCompatActivity() {
         }
 
         setupClicks()
-        
         bannerHandler.post(bannerRunnable)
         if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
-
         binding.cardBanner.requestFocus() 
         
-        // Carrega a lista do servidor com a nova ordenação
         carregarRecentesDoServidor()
     }
 
@@ -89,54 +87,43 @@ class HomeActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // 1. Baixa listas
                 val filmesRaw = XtreamApi.service.getAllVodStreams(user, pass).execute().body() ?: emptyList()
                 val seriesRaw = XtreamApi.service.getAllSeries(user, pass).execute().body() ?: emptyList()
 
-                // 2. ORDENAÇÃO CORRETA POR DATA DE ADIÇÃO (Timestamp)
-                // O Xtream manda um campo chamado "added" (data de upload).
-                // Ordenamos descending (do maior timestamp para o menor).
-                val filmesRecentes = filmesRaw.sortedByDescending { it.added?.toLongOrNull() ?: 0L }.take(20)
-                val seriesRecentes = seriesRaw.sortedByDescending { it.last_modified?.toLongOrNull() ?: 0L }.take(20)
+                // ✅ ORDENAÇÃO POR DATA (ADDED): Dezembro antes de Fevereiro
+                val filmesOrdenados = filmesRaw.sortedByDescending { it.added?.toLongOrNull() ?: 0L }.take(15)
+                val seriesOrdenadas = seriesRaw.sortedByDescending { it.last_modified?.toLongOrNull() ?: 0L }.take(15)
 
-                val listaMista = mutableListOf<JSONObject>()
-                val maxLen = maxOf(filmesRecentes.size, seriesRecentes.size)
+                val listaFilmes = mutableListOf<JSONObject>()
+                filmesOrdenados.forEach { f ->
+                    val obj = JSONObject()
+                    obj.put("id", f.stream_id); obj.put("name", f.name); obj.put("poster_path", f.stream_icon)
+                    listaFilmes.add(obj)
+                }
 
-                // 3. Mistura
-                for (i in 0 until maxLen) {
-                    if (i < filmesRecentes.size) {
-                        val f = filmesRecentes[i]
-                        val obj = JSONObject()
-                        obj.put("id", f.stream_id)
-                        obj.put("name", f.name)
-                        obj.put("poster_path", f.stream_icon)
-                        obj.put("is_series", false)
-                        listaMista.add(obj)
-                    }
-                    if (i < seriesRecentes.size) {
-                        val s = seriesRecentes[i]
-                        val obj = JSONObject()
-                        obj.put("id", s.series_id)
-                        obj.put("name", s.name)
-                        obj.put("poster_path", s.cover)
-                        obj.put("is_series", true)
-                        listaMista.add(obj)
-                    }
+                val listaSeries = mutableListOf<JSONObject>()
+                seriesOrdenadas.forEach { s ->
+                    val obj = JSONObject()
+                    obj.put("id", s.series_id); obj.put("name", s.name); obj.put("poster_path", s.cover)
+                    listaSeries.add(obj)
                 }
 
                 withContext(Dispatchers.Main) {
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
-                    // Usa o NOVO Adapter Universal
-                    val adapter = HomeUniversalAdapter(this@HomeActivity, listaMista)
-                    binding.rvRecentAdditions.adapter = adapter
                     
-                    binding.rvRecentAdditions.isFocusable = true
-                    binding.rvRecentAdditions.nextFocusUpId = binding.cardBanner.id
+                    // ✅ CONCATENA AS DUAS LISTAS USANDO ADAPTERS SEPARADOS
+                    val filmesAdapter = HomeFilmesAdapter(this@HomeActivity, listaFilmes)
+                    val seriesAdapter = HomeSeriesAdapter(this@HomeActivity, listaSeries)
+                    
+                    val concatAdapter = ConcatAdapter(filmesAdapter, seriesAdapter)
+                    binding.rvRecentAdditions.adapter = concatAdapter
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
+    // ... (restante das funções: carregarAnuncioFirebase, carregarBannerAlternado, buscarLogoOverlayHome, setupClicks, mostrarDialogoSair - MANTIDOS IGUAIS) ...
+    
     private fun carregarAnuncioFirebase() {
         val remoteConfig = Firebase.remoteConfig
         val imgUrl = remoteConfig.getString("anuncio_imagem") 
@@ -231,14 +218,8 @@ class HomeActivity : AppCompatActivity() {
     }
 
     override fun onResume() { super.onResume(); if (isTelevisionDevice()) binding.cardBanner.requestFocus() }
-
-    private fun isTelevisionDevice(): Boolean {
-        return packageManager.hasSystemFeature("android.software.leanback") || 
-               packageManager.hasSystemFeature("android.hardware.type.television")
-    }
-
+    private fun isTelevisionDevice(): Boolean = packageManager.hasSystemFeature("android.software.leanback") || packageManager.hasSystemFeature("android.hardware.type.television")
     override fun onDestroy() { super.onDestroy(); bannerHandler.removeCallbacks(bannerRunnable) }
-
     private fun mostrarDialogoSair() {
         AlertDialog.Builder(this).setTitle("Sair").setMessage("Deseja sair?")
             .setPositiveButton("Sim") { _, _ -> 
