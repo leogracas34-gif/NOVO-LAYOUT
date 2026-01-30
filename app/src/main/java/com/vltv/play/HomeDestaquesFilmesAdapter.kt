@@ -24,45 +24,48 @@ class HomeDestaquesFilmesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
-        
-        // ✅ CORREÇÃO CRÍTICA PARA HÍBRIDO (TV + CELULAR):
-        v.isFocusable = true            // Necessário para o Controle Remoto da TV navegar
-        v.isFocusableInTouchMode = false // ✅ ISSO GARANTE QUE NO CELULAR SEJA SÓ 1 CLIQUE
-        
+        // ✅ CONFIGURAÇÃO: 1 Clique no Celular, Foco na TV
+        v.isFocusable = true
+        v.isFocusableInTouchMode = false 
         return VH(v)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        // Detecção Automática: Filme ou Série
-        val isSeries = item.has("name") 
-        val titulo = if (isSeries) item.getString("name") else item.optString("title")
-        val poster = item.optString("poster_path", "")
-        val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
+        // Pega os dados que montamos na HomeActivity (DO SERVIDOR)
+        val isSeries = item.optBoolean("is_series", false)
+        val titulo = item.optString("name", "Sem Título")
+        val posterPath = item.optString("poster_path", "")
+        
+        // ✅ Como vem do servidor, é um link completo (http...), então usamos direto.
+        val imgUrl = posterPath
 
         holder.tvName.text = titulo
         holder.tvName.visibility = View.GONE
 
         Glide.with(context)
-            .load(fullPosterUrl)
+            .load(imgUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.bg_logo_placeholder)
             .centerCrop() 
             .into(holder.imgPoster)
 
-        // ✅ CLIQUE (Funciona com Toque no Celular e "Enter" na TV)
         holder.itemView.setOnClickListener {
+            // ✅ AQUI A MÁGICA ACONTECE:
+            // Mandamos o ID do Servidor (ex: 14209) direto para a sua DetailsActivity.
+            // Ela vai receber e dar play na hora.
             val intent = Intent(context, DetailsActivity::class.java)
-            intent.putExtra("stream_id", item.optInt("id")) 
+            
+            intent.putExtra("stream_id", item.optInt("id")) // ID Correto do Servidor
             intent.putExtra("name", titulo)
-            intent.putExtra("icon", fullPosterUrl)
-            intent.putExtra("is_series", isSeries) 
-            intent.putExtra("from_highlights", true) 
+            intent.putExtra("icon", imgUrl)                 // Capa do Servidor
+            intent.putExtra("is_series", isSeries)
+            intent.putExtra("rating", "0.0")
+            
             context.startActivity(intent)
         }
 
-        // ✅ VISUAL (Apenas muda o tamanho/zoom, não interfere no clique)
         holder.itemView.setOnFocusChangeListener { view, hasFocus ->
             view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
                 .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
