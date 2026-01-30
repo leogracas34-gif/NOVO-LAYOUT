@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -31,22 +30,16 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val TMDB_API_KEY = "9b73f5dd15b8165b1b57419be2f29128"
     
-    // Banner Roda Sozinho (Anúncio ou Aleatório)
+    // Banner rotativo (Cima) continua usando TMDB para ficar bonito (apenas visual)
     private val bannerHandler = Handler(Looper.getMainLooper())
     private val bannerRunnable = object : Runnable {
         override fun run() {
             if (!MODO_FUTEBOL_ATIVO) {
-                // Sorteia: 50% chance de anúncio do Firebase, 50% de filme aleatório
                 val temAnuncio = Firebase.remoteConfig.getBoolean("tem_anuncio")
-                val mostrarAnuncio = Random.nextBoolean() 
-                
-                if (temAnuncio && mostrarAnuncio) {
-                    carregarAnuncioFirebase()
-                } else {
-                    carregarBannerAlternado()
-                }
+                val mostrarAnuncio = temAnuncio && Random.nextBoolean()
+                if (mostrarAnuncio) carregarAnuncioFirebase() else carregarBannerAlternado()
             }
-            bannerHandler.postDelayed(this, 30000) // Muda a cada 30 segundos
+            bannerHandler.postDelayed(this, 30000) 
         }
     }
 
@@ -57,14 +50,13 @@ class HomeActivity : AppCompatActivity() {
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Configuração Firebase
         val remoteConfig = Firebase.remoteConfig
         remoteConfig.setConfigSettingsAsync(remoteConfigSettings { minimumFetchIntervalInSeconds = 60 })
-        
         remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
                 MODO_FUTEBOL_ATIVO = remoteConfig.getBoolean("modo_futebol")
                 if (MODO_FUTEBOL_ATIVO) {
-                    // Modo Futebol (Prioridade Máxima)
                     binding.tvBannerTitle.text = remoteConfig.getString("futebol_titulo")
                     binding.tvBannerOverview.text = remoteConfig.getString("futebol_descricao")
                     binding.imgBannerLogo.visibility = View.GONE
@@ -79,38 +71,66 @@ class HomeActivity : AppCompatActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
         }
 
-        DownloadHelper.registerReceiver(this)
         setupClicks()
         
-        // Carrega a lista, mas sem vincular ao banner
-        carregarDestaquesAbaixo("movie") 
-
-        // Inicia o ciclo do banner
         bannerHandler.post(bannerRunnable)
-        
-        // Carrega um banner inicial logo de cara para não ficar cinza
         if (!MODO_FUTEBOL_ATIVO) carregarBannerAlternado()
 
         binding.cardBanner.requestFocus() 
+        
+        // ✅ AQUI ESTÁ A CORREÇÃO: Carrega direto do XTREAM CODES
+        carregarRecentesDoServidor()
     }
 
-    private fun carregarDestaquesAbaixo(tipo: String) {
-        val urlDestaques = "https://api.themoviedb.org/3/trending/$tipo/week?api_key=$TMDB_API_KEY&language=pt-BR"
-        
+    private fun carregarRecentesDoServidor() {
+        val prefs = getSharedPreferences("vltv_prefs", MODE_PRIVATE)
+        val user = prefs.getString("username", "") ?: ""
+        val pass = prefs.getString("password", "") ?: ""
+
+        if (user.isEmpty()) return
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val jsonTxt = URL(urlDestaques).readText()
-                val results = JSONObject(jsonTxt).getJSONArray("results")
-                val listaItens = mutableListOf<JSONObject>()
-                for (i in 0 until results.length()) {
-                    listaItens.add(results.getJSONObject(i))
+                // 1. Baixa listas completas do servidor (Isso garante o ID correto)
+                val filmesRaw = XtreamApi.service.getAllVodStreams(user, pass).execute().body() ?: emptyList()
+                val seriesRaw = XtreamApi.service.getAllSeries(user, pass).execute().body() ?: emptyList()
+
+                // 2. Ordena pelo ID (Maior ID = Mais novo) e pega os top 20 de cada
+                val filmesRecentes = filmesRaw.sortedByDescending { it.stream_id }.take(20)
+                val seriesRecentes = seriesRaw.sortedByDescending { it.series_id }.take(20)
+
+                val listaMista = mutableListOf<JSONObject>()
+                val maxLen = maxOf(filmesRecentes.size, seriesRecentes.size)
+
+                // 3. Mistura (Intercala) e cria JSON para o Adapter
+                for (i in 0 until maxLen) {
+                    // Adiciona Filme
+                    if (i < filmesRecentes.size) {
+                        val f = filmesRecentes[i]
+                        val obj = JSONObject()
+                        obj.put("id", f.stream_id)             // ✅ ID REAL DO SERVIDOR
+                        obj.put("name", f.name)
+                        obj.put("poster_path", f.stream_icon)  // ✅ URL DA CAPA DO SERVIDOR
+                        obj.put("is_series", false)
+                        listaMista.add(obj)
+                    }
+                    // Adiciona Série
+                    if (i < seriesRecentes.size) {
+                        val s = seriesRecentes[i]
+                        val obj = JSONObject()
+                        obj.put("id", s.series_id)             // ✅ ID REAL DO SERVIDOR
+                        obj.put("name", s.name)
+                        obj.put("poster_path", s.cover)        // ✅ URL DA CAPA DO SERVIDOR
+                        obj.put("is_series", true)
+                        listaMista.add(obj)
+                    }
                 }
 
                 withContext(Dispatchers.Main) {
                     binding.rvRecentAdditions.layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
                     
-                    // ✅ ADAPTER SIMPLIFICADO: Sem callback
-                    val adapter = HomeDestaquesFilmesAdapter(this@HomeActivity, listaItens)
+                    // Chama o Adapter (veja código abaixo)
+                    val adapter = HomeDestaquesFilmesAdapter(this@HomeActivity, listaMista)
                     binding.rvRecentAdditions.adapter = adapter
                     
                     binding.rvRecentAdditions.isFocusable = true
@@ -125,28 +145,19 @@ class HomeActivity : AppCompatActivity() {
         val imgUrl = remoteConfig.getString("anuncio_imagem") 
         val titulo = remoteConfig.getString("anuncio_titulo")
         val desc = remoteConfig.getString("anuncio_descricao")
-
         if (imgUrl.isNotEmpty()) {
             binding.tvBannerTitle.text = titulo
             binding.tvBannerOverview.text = desc
             binding.tvBannerTitle.visibility = View.VISIBLE
             binding.imgBannerLogo.visibility = View.GONE
             Glide.with(this).load(imgUrl).centerCrop().into(binding.imgBanner)
-        } else {
-            carregarBannerAlternado()
-        }
+        } else { carregarBannerAlternado() }
     }
 
     private fun carregarBannerAlternado() {
         if (MODO_FUTEBOL_ATIVO) return
-
-        val prefs = getSharedPreferences("vltv_home_prefs", Context.MODE_PRIVATE)
-        val ultimoTipo = prefs.getString("ultimo_tipo_banner", "tv") ?: "tv"
-        val tipoAtual = if (ultimoTipo == "tv") "movie" else "tv"
-        prefs.edit().putString("ultimo_tipo_banner", tipoAtual).apply()
-
-        val urlString = "https://api.themoviedb.org/3/trending/$tipoAtual/day?api_key=$TMDB_API_KEY&language=pt-BR"
-
+        val tipo = "movie"
+        val urlString = "https://api.themoviedb.org/3/trending/$tipo/day?api_key=$TMDB_API_KEY&language=pt-BR"
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val results = JSONObject(URL(urlString).readText()).getJSONArray("results")
@@ -156,22 +167,18 @@ class HomeActivity : AppCompatActivity() {
                     val overview = item.optString("overview", "")
                     val backdropPath = item.optString("backdrop_path", "")
                     val tmdbId = item.getString("id")
-
                     withContext(Dispatchers.Main) {
                         binding.tvBannerTitle.text = titulo
                         binding.tvBannerOverview.text = overview
                         binding.tvBannerTitle.visibility = View.VISIBLE
-                        
                         Glide.with(this@HomeActivity)
                             .load("https://image.tmdb.org/t/p/original$backdropPath")
                             .placeholder(R.drawable.bg_logo_placeholder)
-                            .centerCrop()
-                            .into(binding.imgBanner)
-                        
-                        buscarLogoOverlayHome(tmdbId, tipoAtual)
+                            .centerCrop().into(binding.imgBanner)
+                        buscarLogoOverlayHome(tmdbId, tipo)
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { }
         }
     }
 
@@ -180,7 +187,6 @@ class HomeActivity : AppCompatActivity() {
             try {
                 val imagesUrl = "https://api.themoviedb.org/3/$tipo/$tmdbId/images?api_key=$TMDB_API_KEY&include_image_language=pt,en,null"
                 val imagesObj = JSONObject(URL(imagesUrl).readText())
-
                 if (imagesObj.has("logos") && imagesObj.getJSONArray("logos").length() > 0) {
                     val logoPath = imagesObj.getJSONArray("logos").getJSONObject(0).getString("file_path")
                     withContext(Dispatchers.Main) {
@@ -189,17 +195,12 @@ class HomeActivity : AppCompatActivity() {
                         Glide.with(this@HomeActivity).load("https://image.tmdb.org/t/p/w500$logoPath").into(binding.imgBannerLogo)
                     }
                 } else {
-                    withContext(Dispatchers.Main) {
+                     withContext(Dispatchers.Main) {
                         binding.tvBannerTitle.visibility = View.VISIBLE
                         binding.imgBannerLogo.visibility = View.GONE
                     }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    binding.tvBannerTitle.visibility = View.VISIBLE
-                    binding.imgBannerLogo.visibility = View.GONE
-                }
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -229,26 +230,17 @@ class HomeActivity : AppCompatActivity() {
                 }
             }.show()
         }
-        binding.cardBanner.setOnClickListener {
-            if (MODO_FUTEBOL_ATIVO) startActivity(Intent(this, LiveTvActivity::class.java))
-        }
+        binding.cardBanner.setOnClickListener { if (MODO_FUTEBOL_ATIVO) startActivity(Intent(this, LiveTvActivity::class.java)) }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (isTelevisionDevice()) binding.cardBanner.requestFocus()
-        // Retiramos o "recarregar banner" daqui para não piscar a tela
-    }
+    override fun onResume() { super.onResume(); if (isTelevisionDevice()) binding.cardBanner.requestFocus() }
 
     private fun isTelevisionDevice(): Boolean {
         return packageManager.hasSystemFeature("android.software.leanback") || 
                packageManager.hasSystemFeature("android.hardware.type.television")
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        bannerHandler.removeCallbacks(bannerRunnable)
-    }
+    override fun onDestroy() { super.onDestroy(); bannerHandler.removeCallbacks(bannerRunnable) }
 
     private fun mostrarDialogoSair() {
         AlertDialog.Builder(this).setTitle("Sair").setMessage("Deseja sair?")
