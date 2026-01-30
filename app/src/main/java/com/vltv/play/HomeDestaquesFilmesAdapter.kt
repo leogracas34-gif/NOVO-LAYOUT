@@ -17,7 +17,7 @@ import android.os.Looper
 class HomeDestaquesFilmesAdapter(
     private val context: Context,
     private val items: List<JSONObject>,
-    private val onItemSelected: (JSONObject) -> Unit // Aciona o Preview no Banner
+    private val onItemSelected: (JSONObject) -> Unit
 ) : RecyclerView.Adapter<HomeDestaquesFilmesAdapter.VH>() {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -30,7 +30,6 @@ class HomeDestaquesFilmesAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val v = LayoutInflater.from(context).inflate(R.layout.item_vod, parent, false)
-        // Garante que o item seja focável pelo controle remoto
         v.isFocusable = true
         v.isFocusableInTouchMode = true
         return VH(v)
@@ -39,72 +38,43 @@ class HomeDestaquesFilmesAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         
-        // 1. Extração de dados (Compatível com Espelhamento do Servidor)
-        val titulo = when {
-            item.has("name") -> item.getString("name")
-            item.has("title") -> item.getString("title")
-            else -> "Sem Título"
-        }
-
-        // Pega o ID Real do seu servidor para o Player não travar
-        val serverId = when {
-            item.has("stream_id") -> item.optInt("stream_id")
-            item.has("id") -> item.optInt("id")
-            else -> 0
-        }
-
-        val iconUrl = when {
-            item.has("stream_icon") -> item.getString("stream_icon")
-            item.has("cover") -> item.getString("cover")
-            item.has("poster_path") -> "https://image.tmdb.org/t/p/w500${item.getString("poster_path")}"
-            else -> ""
-        }
+        val titulo = if (item.has("title")) item.getString("title") else item.optString("name", "")
+        val poster = item.optString("poster_path", "")
+        val fullPosterUrl = "https://image.tmdb.org/t/p/w500$poster"
 
         holder.tvName.text = titulo
         holder.tvName.visibility = View.GONE
 
-        // Imagem com CenterCrop para não esticar/ficar gigante
         Glide.with(context)
-            .load(iconUrl)
+            .load(fullPosterUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.bg_logo_placeholder)
             .centerCrop() 
             .into(holder.imgPoster)
 
-        // ✅ CLIQUE (Toque no Celular ou 'OK' no Controle)
         holder.itemView.setOnClickListener {
             val intent = Intent(context, DetailsActivity::class.java)
-            
-            // Enviamos o ID para as duas chaves para garantir que a DetailsActivity receba
-            intent.putExtra("stream_id", serverId)
-            intent.putExtra("id", serverId) 
-            
+            // Enviamos o ID do TMDB para a sinopse e logo
+            intent.putExtra("stream_id", item.optInt("id")) 
             intent.putExtra("name", titulo)
-            intent.putExtra("icon", iconUrl)
-            intent.putExtra("is_series", false) // Força modo Filme
-            
+            intent.putExtra("icon", fullPosterUrl)
+            intent.putExtra("is_series", false)
+            // Tag para a DetailsActivity saber que precisa buscar o ID de vídeo no servidor
+            intent.putExtra("from_highlights", true) 
             context.startActivity(intent)
         }
 
-        // ✅ LÓGICA DE FOCO (Controle Remoto) e SELEÇÃO (Preview)
         holder.itemView.setOnFocusChangeListener { view, hasFocus ->
-            // Efeito visual de aumento (Feedback do controle remoto)
-            view.animate().scaleX(if (hasFocus) 1.12f else 1.0f)
-                .scaleY(if (hasFocus) 1.12f else 1.0f).setDuration(150).start()
+            view.animate().scaleX(if (hasFocus) 1.1f else 1.0f)
+                .scaleY(if (hasFocus) 1.1f else 1.0f).setDuration(150).start()
             
             if (hasFocus) {
                 holder.tvName.visibility = View.VISIBLE
-                view.elevation = 10f
-                
-                // DISPARA O PREVIEW: Se o usuário parar o foco por 1.5s, roda o vídeo no banner
                 runnable?.let { handler.removeCallbacks(it) }
-                runnable = Runnable { 
-                    onItemSelected(item) 
-                }
+                runnable = Runnable { onItemSelected(item) }
                 handler.postDelayed(runnable!!, 1500)
             } else {
                 holder.tvName.visibility = View.GONE
-                view.elevation = 0f
                 runnable?.let { handler.removeCallbacks(it) }
             }
         }
