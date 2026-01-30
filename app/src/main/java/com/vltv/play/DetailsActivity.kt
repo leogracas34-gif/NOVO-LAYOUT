@@ -37,6 +37,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 // ✅ MANTIDO: EpisodeData
 data class EpisodeData(
@@ -59,7 +62,7 @@ class DetailsActivity : AppCompatActivity() {
 
     private lateinit var imgPoster: ImageView
     private lateinit var tvTitle: TextView
-    private lateinit var imgTitleLogo: ImageView // ✅ ADICIONADO PARA LOGO TMDB
+    private lateinit var imgTitleLogo: ImageView 
     private lateinit var tvRating: TextView
     private lateinit var tvGenre: TextView
     private lateinit var tvCast: TextView
@@ -104,7 +107,61 @@ class DetailsActivity : AppCompatActivity() {
         tentarCarregarTextoCache()
         tentarCarregarLogoCache()
 
+        // ✅ LÓGICA DE CORREÇÃO DO ID (PONTE TMDB -> XTREAM)
+        // Se o clique veio dos destaques, o ID é do site, não do servidor.
+        // Precisamos buscar o ID real pelo NOME do filme.
+        if (intent.getBooleanExtra("from_highlights", false)) {
+            Log.d("DETAILS", "Veio de Destaques. Buscando ID real no servidor...")
+            buscarIdRealNoServidor(name)
+        } else {
+            // Se veio do painel normal, já temos o ID certo.
+            Log.d("DETAILS", "ID já é do servidor: $streamId")
+        }
+
         sincronizarDadosTMDB()
+    }
+
+    // ✅ NOVA FUNÇÃO: Busca o filme no servidor pelo Nome para pegar o ID correto
+    private fun buscarIdRealNoServidor(nomeTMDB: String) {
+        val prefs = getSharedPreferences("vltv_prefs", MODE_PRIVATE)
+        val user = prefs.getString("username", "") ?: ""
+        val pass = prefs.getString("password", "") ?: ""
+
+        // Avisa o usuário que estamos sincronizando
+        tvPlot.text = "Sincronizando filme com o servidor..."
+        btnPlay.isEnabled = false // Trava o play até achar o ID
+
+        if (!isSeries) {
+            XtreamApi.service.getAllVodStreams(user, pass).enqueue(object : Callback<List<VodStream>> {
+                override fun onResponse(call: Call<List<VodStream>>, response: Response<List<VodStream>>) {
+                    val lista = response.body() ?: return
+                    
+                    // Tenta encontrar o nome EXATO ou PARCIAL
+                    val achou = lista.find { 
+                        it.name.equals(nomeTMDB, ignoreCase = true) || 
+                        nomeTMDB.contains(it.name, ignoreCase = true) ||
+                        it.name.contains(nomeTMDB, ignoreCase = true)
+                    }
+
+                    if (achou != null) {
+                        streamId = achou.stream_id // ✅ ATUALIZA O ID PARA O SERVIDOR
+                        runOnUiThread {
+                            btnPlay.isEnabled = true
+                            tvPlot.text = "Filme encontrado! Carregando sinopse..."
+                            // Agora o botão assistir vai mandar o ID certo (12345) e não (550)
+                        }
+                    } else {
+                        runOnUiThread {
+                            tvPlot.text = "Este filme ainda não foi adicionado ao servidor."
+                        }
+                    }
+                }
+                override fun onFailure(call: Call<List<VodStream>>, t: Throwable) {
+                    runOnUiThread { tvPlot.text = "Erro ao conectar com servidor." }
+                }
+            })
+        }
+        // Futuramente pode adicionar o 'else' para séries aqui
     }
 
     private fun configurarTelaTV() {
@@ -119,7 +176,7 @@ class DetailsActivity : AppCompatActivity() {
     private fun inicializarViews() {
         imgPoster = findViewById(R.id.imgPoster)
         tvTitle = findViewById(R.id.tvTitle)
-        imgTitleLogo = findViewById(R.id.imgTitleLogo) // ✅ INICIALIZADO
+        imgTitleLogo = findViewById(R.id.imgTitleLogo) 
         
         // Texto invisível por padrão até a logo ou cache carregar
         tvTitle.visibility = View.INVISIBLE 
@@ -200,9 +257,9 @@ class DetailsActivity : AppCompatActivity() {
         
         val url = "https://api.themoviedb.org/3/search/$type?api_key=$apiKey&query=$encoded&language=pt-BR"
 
-        client.newCall(Request.Builder().url(url).build()).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { runOnUiThread { tvTitle.visibility = View.VISIBLE } }
-            override fun onResponse(call: Call, response: Response) {
+        client.newCall(Request.Builder().url(url).build()).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) { runOnUiThread { tvTitle.visibility = View.VISIBLE } }
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 val body = response.body()?.string() ?: return
                 try {
                     val results = JSONObject(body).optJSONArray("results")
@@ -235,8 +292,8 @@ class DetailsActivity : AppCompatActivity() {
     // ✅ NOVO: Busca e salva a logo do filme
     private fun buscarLogoTMDB(id: Int, type: String, key: String) {
         val imagesUrl = "https://api.themoviedb.org/3/$type/$id/images?api_key=$key&include_image_language=pt,en,null"
-        client.newCall(Request.Builder().url(imagesUrl).build()).enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
+        client.newCall(Request.Builder().url(imagesUrl).build()).enqueue(object : okhttp3.Callback {
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 val body = response.body()?.string() ?: return
                 try {
                     val logos = JSONObject(body).optJSONArray("logos")
@@ -252,14 +309,14 @@ class DetailsActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {}
             }
-            override fun onFailure(call: Call, e: IOException) {}
+            override fun onFailure(call: okhttp3.Call, e: IOException) {}
         })
     }
 
     private fun buscarDetalhesCompletos(id: Int, type: String, key: String) {
         val url = "https://api.themoviedb.org/3/$type/$id?api_key=$key&append_to_response=credits&language=pt-BR"
-        client.newCall(Request.Builder().url(url).build()).enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
+        client.newCall(Request.Builder().url(url).build()).enqueue(object : okhttp3.Callback {
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 val body = response.body()?.string() ?: return
                 try {
                     val d = JSONObject(body)
@@ -275,7 +332,7 @@ class DetailsActivity : AppCompatActivity() {
                     }
                     runOnUiThread {
                         val g = "Gênero: ${genresList.joinToString(", ")}"
-                        val e = "Elenco: ${castNamesList.joinToString(", ")}" // ✅ MANTIDO EM TEXTO
+                        val e = "Elenco: ${castNamesList.joinToString(", ")}" 
                         tvGenre.text = g
                         tvCast.text = e
                         getSharedPreferences("vltv_text_cache", Context.MODE_PRIVATE).edit()
@@ -283,7 +340,7 @@ class DetailsActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {}
             }
-            override fun onFailure(call: Call, e: IOException) {}
+            override fun onFailure(call: okhttp3.Call, e: IOException) {}
         })
     }
 
@@ -358,7 +415,10 @@ class DetailsActivity : AppCompatActivity() {
 
     private fun abrirPlayer(usarResume: Boolean) {
         val intent = Intent(this, PlayerActivity::class.java)
-        intent.putExtra("stream_id", streamId).putExtra("stream_type", if (isSeries) "series" else "movie").putExtra("channel_name", name)
+        // O streamId aqui já terá sido atualizado pelo buscarIdRealNoServidor se veio dos destaques
+        intent.putExtra("stream_id", streamId)
+        intent.putExtra("stream_type", if (isSeries) "series" else "movie")
+        intent.putExtra("channel_name", name)
         if (usarResume) {
             val pos = getSharedPreferences("vltv_prefs", Context.MODE_PRIVATE).getLong("movie_resume_${streamId}_pos", 0L)
             intent.putExtra("start_position_ms", pos)
